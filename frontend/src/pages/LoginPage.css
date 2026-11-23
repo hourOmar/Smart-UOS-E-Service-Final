@@ -1,0 +1,281 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
+
+/* Login: the campus photograph, untouched, with one compact warm frosted
+   card over the central entrance. */
+
+.login {
+  --title: #06402f;
+  --green: #0a5640;
+  --green-hover: #084a37;
+  --green-press: #063d2d;
+  --field: #fbf8f5;
+  --field-edge: #d6d0c9;
+  --field-edge-hover: #b9b1a8;
+  --text: #1c2421;
+  --placeholder: #8f8f8f;
+  --danger: #a3222b;
+  --danger-wash: rgb(255 240 240 / 0.92);
+  --card-height: 256px;
+
+  /* Background wash: raise --photo-veil for a stronger haze, lower it
+     for a clearer photo. Contrast/saturate at 1 means unchanged. */
+  --photo-veil: 0.28;
+  --photo-brightness: 1.04;
+  --photo-contrast: 0.88;
+  --photo-saturate: 0.82;
+
+  /* Card whiteness: raise toward 1 for more solid white, lower for more glass. */
+  --card-white: 0.72;
+
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow-y: auto;
+  background: #cddcea;
+  color: var(--text);
+  color-scheme: light;
+  font-family: 'Lato', system-ui, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+/* Photograph: fills the viewport, aspect ratio preserved, no overlay. */
+
+.login__photo {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.login__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+  filter: brightness(var(--photo-brightness)) contrast(var(--photo-contrast))
+    saturate(var(--photo-saturate));
+}
+
+/* A flat white veil over the photo (no blur, no gradient). */
+.login__photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(255 255 255 / var(--photo-veil));
+  pointer-events: none;
+}
+
+/* Stage: card centred horizontally; its top sits ~52.5% down the
+   viewport, over the central entrance, and never runs off-screen. */
+
+.login__stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100svh;
+  box-sizing: border-box;
+  padding: max(24px, min(52.5svh, 100svh - var(--card-height) - 24px)) 16px 24px;
+}
+
+.login__panel {
+  width: min(100%, 380px);
+  box-sizing: border-box;
+  padding: 25px 27px 17px;
+  border: 1px solid rgb(255 255 255 / 0.55);
+  border-radius: 22px;
+  background: rgb(255 255 255 / var(--card-white));
+  /* saturate(0.6) neutralises the warm stone showing through the glass. */
+  -webkit-backdrop-filter: blur(12px) saturate(0.6);
+  backdrop-filter: blur(12px) saturate(0.6);
+  box-shadow: 0 10px 30px -8px rgb(60 42 24 / 0.22);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .login__panel {
+    background: rgb(255 255 255 / 0.92);
+  }
+}
+
+.login .login__product {
+  margin: 0;
+  font-family: inherit;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-align: center;
+  color: var(--title);
+}
+
+/* Form */
+
+.login__form {
+  display: grid;
+  gap: 18px;
+  margin-top: 19px;
+}
+
+.login__field {
+  position: relative;
+}
+
+/* Labels stay for screen readers and autofill; placeholders are visible. */
+.login__field label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.login__field input {
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 1px solid var(--field-edge);
+  border-radius: 9px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  caret-color: var(--green);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.login__field--password input {
+  padding-right: 70px;
+}
+
+.login__field input::placeholder {
+  color: var(--placeholder);
+  opacity: 1;
+}
+
+.login__field input:hover {
+  border-color: var(--field-edge-hover);
+}
+
+.login__field input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgb(10 86 64 / 0.18);
+}
+
+.login__field input:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  box-shadow: 0 0 0 100px var(--field) inset;
+}
+
+.login__toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: #e8ebe7;
+  color: var(--green);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.login__toggle:hover {
+  background: #dde2dc;
+}
+
+.login__toggle:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.login__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -4px 0 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--danger-wash);
+  color: var(--danger);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.login__error svg {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+}
+
+.login__submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 45px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--green);
+  color: #ffffff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 10px -2px rgb(10 86 64 / 0.35);
+  transition: background-color 150ms ease;
+}
+
+.login__submit:hover {
+  background: var(--green-hover);
+}
+
+.login__submit:active {
+  background: var(--green-press);
+}
+
+.login__submit:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+
+.login__submit:disabled {
+  background: rgb(10 86 64 / 0.75);
+  cursor: progress;
+}
+
+.login__spinner {
+  width: 18px;
+  height: 18px;
+  animation: login-spin 800ms linear infinite;
+}
+
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login__spinner {
+    animation-duration: 1600ms;
+  }
+
+  .login__field input,
+  .login__submit {
+    transition: none;
+  }
+}

@@ -1,0 +1,1007 @@
+/* Raise Capacity review (/admin/requests/raise-capacity/:requestId). Page,
+   panel, field and status styles come from AdminDashboard.css and
+   components/requests/Requests.css; only review-specific parts are here. */
+
+.rv-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rv-head__kicker {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--proto-green);
+}
+
+.student .rv-head__title {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--proto-heading);
+  overflow-wrap: anywhere;
+}
+
+.rv-head__summary {
+  margin: 0;
+  font-size: 15.5px;
+  color: var(--proto-body);
+}
+
+/* Request and student side by side, stacked when narrow. */
+.rv-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.rv-grid > .req-panel {
+  flex: 1 1 380px;
+  min-width: 0;
+}
+
+.rv-panel {
+  min-width: 0;
+}
+
+.rv-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding-right: 16px;
+  border-bottom: 1px solid #e2e6e0;
+}
+
+.student .rv-panel__head .rv-panel__title {
+  border-bottom: 0;
+}
+
+.rv-live-tag,
+.rv-snapshot__tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #eef1f6;
+  color: #33415c;
+  font-size: 11.5px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.rv-snapshot__tag {
+  margin: 0 8px 0 0;
+  background: #fbf3e2;
+  color: #6e4b00;
+}
+
+.rv-muted {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--proto-muted);
+}
+
+.req-fields__item dd.rv-missing,
+p.rv-missing {
+  margin: 0;
+  font-weight: 400;
+  color: var(--proto-muted);
+}
+
+.rv-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e6cf98;
+  border-radius: 8px;
+  background: #fbf3e2;
+  color: #6e4b00;
+  font-size: 13.5px;
+}
+
+/* Eligibility recommendation */
+
+.rv-rerun {
+  padding: 8px 14px;
+  border: 1px solid var(--proto-green);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--proto-green);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rv-rerun:hover:not(:disabled) {
+  background: #eaf3ee;
+}
+
+.rv-rerun:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rv-advisory-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--proto-muted);
+}
+
+.rv-running {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--proto-body);
+}
+
+.rv-running__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--proto-green);
+  animation: rv-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes rv-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-running__dot {
+    animation: none;
+  }
+}
+
+.rv-rec {
+  overflow: hidden;
+  border: 1px solid #c9d1e0;
+  border-radius: 10px;
+}
+
+.rv-rec__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-weight: 600;
+}
+
+.rv-rec__label {
+  font-size: 16px;
+}
+
+.rv-rec__advisory {
+  margin-left: auto;
+  padding: 2px 9px;
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rv-rec[data-tone='approve'] {
+  border-color: #b8d9c8;
+}
+
+.rv-rec[data-tone='approve'] .rv-rec__head {
+  background: #e6f2ec;
+  color: #0b5d45;
+}
+
+.rv-rec[data-tone='reject'] {
+  border-color: #e8c2bc;
+}
+
+.rv-rec[data-tone='reject'] .rv-rec__head {
+  background: #f9e9e7;
+  color: #9a2b1f;
+}
+
+.rv-rec[data-tone='manual'] {
+  border-color: #e6cf98;
+}
+
+.rv-rec[data-tone='manual'] .rv-rec__head {
+  background: #fbf3e2;
+  color: #6e4b00;
+}
+
+.rv-rec__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.rv-rec__reasoning {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #17211c;
+}
+
+.rv-explain {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.rv-explain__item dt {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--proto-muted);
+}
+
+.rv-explain__item dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #2b3731;
+  overflow-wrap: anywhere;
+}
+
+.rv-meta {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--proto-muted);
+}
+
+/* Priority assessment: the same card as the recommendation, with the
+   requests table's priority pill (AdminDashboard.css) in its neutral head. */
+
+.rv-prio .rv-rec__head {
+  background: #f4f6f4;
+  color: var(--proto-heading);
+}
+
+.rv-prio .adm-prio-pill {
+  font-size: 13px;
+}
+
+.rv-prio__evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid #edf0eb;
+}
+
+.rv-prio__evidence-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--proto-muted);
+}
+
+.rv-prio__evidence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #2b3731;
+  overflow-wrap: anywhere;
+}
+
+/* Technical problems: visually distinct from any recommendation. */
+.rv-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px dashed #9aa6a0;
+  border-radius: 10px;
+  background: #f4f6f4;
+}
+
+.rv-alert[data-tone='failure'] {
+  border-color: #d39a92;
+  background: #fdf3f1;
+}
+
+.rv-alert__title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--proto-heading);
+}
+
+.rv-alert__body {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--proto-body);
+  overflow-wrap: anywhere;
+}
+
+/* Evidence */
+
+.rv-snapshot {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--proto-body);
+}
+
+.rv-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 14px;
+}
+
+.rv-check {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e2e6e0;
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.rv-check__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.student .rv-check__title {
+  margin: 0;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--proto-heading);
+}
+
+.rv-check__fields {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.rv-capacity {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+.rv-check__details,
+.rv-check__source {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--proto-body);
+  overflow-wrap: anywhere;
+}
+
+.rv-check__source a {
+  color: var(--proto-green);
+  font-weight: 600;
+}
+
+.rv-check__scope {
+  color: var(--proto-muted);
+}
+
+.rv-pill {
+  flex: none;
+  padding: 2px 9px;
+  border: 1px solid #c9d1e0;
+  border-radius: 999px;
+  background: #eef1f6;
+  color: #33415c;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rv-pill[data-tone='ok'] {
+  border-color: #b8d9c8;
+  background: #e6f2ec;
+  color: #0b5d45;
+}
+
+.rv-pill[data-tone='bad'] {
+  border-color: #e8c2bc;
+  background: #f9e9e7;
+  color: #9a2b1f;
+}
+
+.rv-pill[data-tone='warn'] {
+  border-color: #e6cf98;
+  background: #fbf3e2;
+  color: #6e4b00;
+}
+
+/* Four short columns fit phone widths (the course name wraps), unlike the
+   seven-column admin lists. */
+.adm-table.rv-table {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .adm-table.rv-table th,
+  .adm-table.rv-table td {
+    padding: 10px 8px;
+    letter-spacing: 0;
+  }
+
+  .adm-table.rv-table th:first-child,
+  .adm-table.rv-table td:first-child {
+    padding-left: 12px;
+  }
+}
+
+.rv-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+.rv-transcript__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rv-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--proto-green);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rv-link-button:hover {
+  text-decoration: underline;
+}
+
+/* Staff decision */
+
+.rv-decision__form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rv-decision__choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  margin: 0 0 6px;
+  padding: 0;
+  border: 0;
+}
+
+.rv-decision__legend {
+  flex: 1 1 100%;
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--proto-muted);
+}
+
+.rv-decision__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  cursor: pointer;
+}
+
+.rv-decision__option input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--proto-green);
+}
+
+.rv-decision__note {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--proto-muted);
+}
+
+.rv-decision__textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #8e9a92;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #17211c;
+  font: inherit;
+  font-size: 14.5px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.rv-decision__textarea[aria-invalid='true'] {
+  border-color: #b3261e;
+}
+
+.rv-field-error {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b3261e;
+}
+
+.rv-decision__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.rv-decision__save {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--proto-green);
+  color: #ffffff;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rv-decision__save:hover:not(:disabled) {
+  background: #084935;
+}
+
+.rv-decision__save:disabled,
+.rv-decision__back:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rv-decision__back {
+  margin-top: 0;
+}
+
+.rv-decision__explanation {
+  white-space: pre-wrap;
+}
+
+.rv-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid #e6cf98;
+  border-radius: 10px;
+  background: #fffaf0;
+}
+
+.rv-confirm__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--proto-heading);
+  overflow-wrap: anywhere;
+}
+
+.rv-confirm__body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--proto-body);
+}
+
+.rv-confirm__explanation {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rv-saved {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #b8d9c8;
+  border-radius: 8px;
+  background: #e6f2ec;
+  color: #0b5d45;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.rv-confirm__notice {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #6e4b00;
+}
+
+/* Raise Capacity only (rca-): the AI Agent Evaluation section, with the
+   Prioritization Agent and the Eligibility Agent as sub-sections, and the
+   transcript disclosure. Card, verdict and decision styles come from
+   AdminProgramChangeReview.css. */
+
+.rca-ai__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Each agent: its heading and states inset, then its two result columns full width. */
+.rca-agent {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 0 0;
+  min-width: 0;
+}
+
+.rca-agent > :not(.rca-columns) {
+  margin-inline: 22px;
+}
+
+.rca-agent > :last-child:not(.rca-columns) {
+  margin-bottom: 18px;
+}
+
+/* As on the Course Equivalency review (.pcr-columns.cer-top): result 2fr, cards 3fr. */
+.rca-columns.pcr-columns {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  border-top: 1px solid #edf0eb;
+}
+
+@media (max-width: 860px) {
+  .rca-columns.pcr-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rca-columns .pcr-column {
+    border-right: 0;
+  }
+}
+
+.rca-agent + .rca-agent {
+  border-top: 1px solid #d9dee5;
+}
+
+.rca-agent__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.student .rca-agent__title {
+  margin: 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #33415c;
+}
+
+.rca-verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* The priority badge at verdict size (HIGH / MEDIUM / LOW / MANUAL REVIEW). */
+.rca-verdict .adm-prio-pill {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 16px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rca-reasoning {
+  max-width: 75ch;
+}
+
+/* Factor and check cards stacked in the right column. */
+.rca-factors,
+.rca-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Factor cards use the check-card look (.pcr-check): green = raises priority
+   (data-tone pass), red = lowers it (fail), grey = neutral or not classified
+   (unknown); yellow = needs review, added here. */
+.rca-factor {
+  min-width: 0;
+}
+
+.rca-factor[data-tone='review'] {
+  --pcr-fg: #855600;
+  --pcr-bd: #e6cf98;
+  --pcr-tint: #fdf8ec;
+}
+
+.student .rca-factor .pcr-check__name,
+.student .rca-check .pcr-check__name {
+  margin: 0;
+  font-family: inherit;
+}
+
+.rca-factor__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #33403a;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.rca-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rca-evidence__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--proto-heading);
+}
+
+.rca-evidence__list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #33403a;
+}
+
+.rca-check {
+  min-width: 0;
+}
+
+.rca-check__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.rca-check__fields--capacity {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+}
+
+.rca-check__field {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.rca-check__field dt {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--proto-muted);
+}
+
+.rca-check__field dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--proto-heading);
+  overflow-wrap: anywhere;
+}
+
+.rca-check__fields--capacity dd {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.rca-check__agent {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--pcr-bd);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #33403a;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.rca-check__agent-label {
+  font-weight: 700;
+  color: var(--pcr-fg);
+}
+
+.rca-snapshot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--proto-muted);
+}
+
+.rca-transcript {
+  border-top: 1px solid #d9dee5;
+}
+
+.rca-transcript > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 22px;
+  color: var(--proto-green);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rca-transcript > summary:focus-visible {
+  outline: 2px solid var(--proto-green);
+  outline-offset: -2px;
+}
+
+.rca-transcript__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 22px 18px;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .rca-agent {
+    padding-top: 16px;
+  }
+
+  .rca-agent > :not(.rca-columns) {
+    margin-inline: 16px;
+  }
+
+  .rca-agent > :last-child:not(.rca-columns) {
+    margin-bottom: 16px;
+  }
+
+  .rca-columns .pcr-column {
+    padding: 18px 16px;
+  }
+
+  .rca-transcript > summary {
+    padding: 14px 16px;
+  }
+
+  .rca-transcript__body {
+    padding: 0 16px 16px;
+  }
+}
+
+/* Shortened agent text with "Show full explanation". */
+.rca-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.rca-compact__text {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.rca-compact__covered {
+  font-style: italic;
+  color: var(--proto-muted);
+}
+
+.rca-compact__toggle {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--proto-green);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rca-compact__toggle:hover {
+  text-decoration: underline;
+}
+
+.rca-compact__toggle:focus-visible {
+  outline: 2px solid var(--proto-green);
+  outline-offset: 2px;
+}
+
+/* Required prerequisite courses: each course once, with its own status. */
+.rca-courses {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rca-courses + .rca-courses {
+  margin-top: 4px;
+}
+
+.rca-courses__or {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--proto-muted);
+}
+
+.rca-courses__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rca-course {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.rca-course__status {
+  padding: 1px 7px;
+  border: 1px solid #dde2de;
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #55625a;
+}
+
+.rca-course__status[data-tone='pass'] {
+  border-color: #b8d9c8;
+  color: #0b5d45;
+}
+
+.rca-course__status[data-tone='fail'] {
+  border-color: #e8c2bc;
+  color: #9a2b1f;
+}
+
+.rca-courses__note {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--proto-muted);
+}

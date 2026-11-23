@@ -1,0 +1,130 @@
+/* Transcript modal on the Program Change review page (above the header). */
+
+.pcr-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  grid-template-columns: minmax(0, 880px);
+  place-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.pcr-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(17 22 21 / 0.38);
+}
+
+.pcr-modal__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgb(17 22 21 / 0.22);
+  font-family: var(--proto-font);
+  text-align: left;
+}
+
+.pcr-modal__panel:focus {
+  outline: none;
+}
+
+.pcr-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e2e6e0;
+}
+
+.student .pcr-modal__title {
+  margin: 0;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--proto-heading);
+}
+
+.pcr-modal__close {
+  flex: none;
+  padding: 8px 16px;
+  border: 1px solid #bac4bd;
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--proto-heading);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pcr-modal__close:hover {
+  border-color: var(--proto-green);
+  color: var(--proto-green);
+}
+
+.pcr-modal__close:focus-visible {
+  outline: 2px solid var(--proto-green);
+  outline-offset: 2px;
+}
+
+.pcr-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 20px 20px;
+}
+
+/* Keep each part's height: the body scrolls instead of squeezing them. */
+.pcr-modal__body > * {
+  flex-shrink: 0;
+}
+
+.pcr-modal__body:focus-visible {
+  outline: 2px solid var(--proto-green);
+  outline-offset: -2px;
+}
+
+.pcr-modal__context {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px 20px;
+  margin: 0;
+}
+
+.pcr-modal__context dt {
+  font-size: 12.5px;
+  color: var(--proto-muted);
+}
+
+.pcr-modal__context dd {
+  margin: 2px 0 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--proto-heading);
+  overflow-wrap: anywhere;
+}
+
+.pcr-modal__note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #d9dee5;
+  border-radius: 8px;
+  background: #f3f5f7;
+  font-size: 13.5px;
+  color: #33415c;
+}
+
+/* Five columns need less room than the admin lists' 920px. */
+.adm-table.pcr-modal__table {
+  min-width: 600px;
+}

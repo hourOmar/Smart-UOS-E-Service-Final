@@ -1,0 +1,461 @@
+/* Course Equivalency review: only what the Program Change and Incomplete Exam review
+   styles (AdminProgramChangeReview.css, AdminIncompleteExamReview.css) do not cover. */
+
+/* Program Change context ---------------------------------------------------- */
+
+/* The four fields stay in one row on desktop: columns sized to their content
+   (long names wrap at 16rem) with even gaps, inset to line up with the text of
+   the summary sentence above (its 1px border + 14px padding). */
+.req-fields.cer-context__fields {
+  grid-template-columns: repeat(4, minmax(0, max-content));
+  justify-content: start;
+  column-gap: clamp(32px, 5vw, 64px);
+  padding: 0 15px;
+}
+
+.cer-context__fields .req-fields__item {
+  max-width: 16rem;
+}
+
+@media (max-width: 760px) {
+  .req-fields.cer-context__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 20px;
+  }
+
+  .cer-context__fields .req-fields__item {
+    max-width: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .req-fields.cer-context__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Syllabi ------------------------------------------------------------------- */
+
+/* Both cards fill the row's height, so their upload areas line up. */
+.cer-syllabus {
+  display: flex;
+  flex-direction: column;
+}
+
+.cer-syllabus .req-panel__body {
+  flex: 1;
+  gap: 12px;
+}
+
+.cer-syllabus__hint {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* No file yet: dashed upload area (opened with its button only). */
+.cer-dropzone {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 190px;
+  padding: 22px 18px;
+  box-sizing: border-box;
+  border: 1.5px dashed #b9c4bd;
+  border-radius: 10px;
+  background: #fafbfa;
+  text-align: center;
+}
+
+.cer-dropzone[data-disabled] {
+  border-color: #d5dbd7;
+  background: #f6f7f6;
+}
+
+.cer-dropzone__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: #e8f1ec;
+  color: var(--proto-green);
+}
+
+.cer-dropzone[data-disabled] .cer-dropzone__icon {
+  background: #eceeed;
+  color: var(--proto-muted);
+}
+
+.cer-dropzone__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.cer-dropzone__label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--proto-heading);
+}
+
+.cer-dropzone__rules,
+.cer-dropzone__missing {
+  font-size: 12.5px;
+  color: var(--proto-muted);
+}
+
+.cer-dropzone__button {
+  margin-top: 12px;
+}
+
+.cer-dropzone__button:disabled,
+.cer-file__actions .pcr-rerun:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* A current file: centered like the upload area (same height), solid subtle border. */
+.cer-file {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 190px;
+  padding: 22px 18px;
+  box-sizing: border-box;
+  border: 1.5px solid #dde2de;
+  border-radius: 10px;
+  background: #fafbfa;
+  text-align: center;
+}
+
+.cer-file__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: #e8f1ec;
+  color: var(--proto-green);
+}
+
+.cer-file__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.cer-file__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 1px 9px;
+  border: 1px solid #c6dfd2;
+  border-radius: 999px;
+  background: #f2f8f5;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--proto-green);
+}
+
+/* Long names wrap, up to three lines, then end with an ellipsis (full name on hover). */
+.cer-file__name {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--proto-heading);
+  overflow-wrap: anywhere;
+}
+
+.cer-file__meta {
+  font-size: 13px;
+  color: var(--proto-body);
+}
+
+.cer-file__by {
+  font-size: 12px;
+  color: var(--proto-muted);
+}
+
+.cer-file__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cer-syllabus__stale {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #9a5b00;
+}
+
+.cer-upload__rules {
+  font-size: 12.5px;
+}
+
+.cer-upload__done {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--proto-green);
+}
+
+.cer-progress {
+  height: 6px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e6ebe7;
+}
+
+.cer-progress__bar {
+  display: block;
+  height: 100%;
+  background: var(--proto-green);
+  transition: width 0.2s ease;
+}
+
+/* Evaluation ---------------------------------------------------------------- */
+
+/* Waiting for course syllabi: centered empty state. */
+.cer-waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 36px 22px 32px;
+  text-align: center;
+}
+
+.cer-waiting__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: #eef1f6;
+  color: #33415c;
+}
+
+.cer-waiting__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.cer-waiting__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--proto-heading);
+}
+
+.cer-waiting__text {
+  max-width: 46ch;
+  font-size: 14px;
+  color: var(--proto-muted);
+}
+
+.cer-waiting__status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cer-waiting__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid #d9dee5;
+  border-radius: 999px;
+  background: #f6f7f9;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #33415c;
+}
+
+.cer-waiting__pill[data-state='ready'] {
+  border-color: #c6dfd2;
+  background: #f2f8f5;
+  color: var(--proto-green);
+}
+
+/* Results top: recommendation | academic safeguards, side by side; stacked when narrow. */
+.pcr-columns.cer-top {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+@media (max-width: 860px) {
+  .pcr-columns.cer-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pcr-columns.cer-top .pcr-column {
+    border-right: 0;
+  }
+}
+
+/* A safeguard whose stored agent status differs from the code's result. */
+.cer-check__agent {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--proto-muted);
+}
+
+.cer-other-checks {
+  margin-top: 4px;
+}
+
+/* The agent's two syllabus checks, under the similarity bars. */
+.cer-sim-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Decision panel: no usable AI evaluation (advisory only). */
+.cer-agent__none {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.cer-outdated {
+  margin: 16px 22px 0;
+}
+
+/* Centered in the evaluation panel: same width as before (the panel minus 22px each side),
+   with an explicit auto margin; the content inside stays left-aligned. */
+.cer-similarity {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  width: calc(100% - 44px);
+  margin: 16px auto;
+  padding: 16px;
+  border: 1px solid #dde2de;
+  border-radius: 10px;
+  background: #fafbfa;
+}
+
+.cer-similarity__overall {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.cer-similarity__value {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--proto-heading);
+}
+
+.cer-similarity__band {
+  font-size: 13.5px;
+  color: var(--proto-muted);
+}
+
+.cer-components {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 20px;
+  margin: 0;
+}
+
+.cer-components__item dt {
+  font-size: 13px;
+  color: var(--proto-heading);
+}
+
+.cer-components__item dd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cer-meter {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e6ebe7;
+}
+
+.cer-meter__bar {
+  display: block;
+  height: 100%;
+  background: var(--proto-green);
+}
+
+.cer-uncovered ul {
+  margin: 4px 0 8px;
+  padding-left: 20px;
+  font-size: 13.5px;
+}
+
+.cer-decision {
+  margin-top: 16px;
+}
+
+/* Decision ------------------------------------------------------------------ */
+
+/* Decision only: approval does not change the academic record. */
+.cer-limitation {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #d9dee5;
+  border-left: 3px solid #33415c;
+  border-radius: 8px;
+  background: #f3f5f7;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #33415c;
+}
+
+.cer-override__text {
+  margin: 0 0 8px;
+}
+
+.cer-override__confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cer-override__confirm input {
+  margin-top: 3px;
+}
+
+@media (max-width: 640px) {
+  .cer-similarity {
+    width: calc(100% - 24px);
+  }
+}

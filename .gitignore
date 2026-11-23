@@ -1,0 +1,88 @@
+# ---------------------------------------------------------------------------
+# Kept on this computer only (never pushed)
+# ---------------------------------------------------------------------------
+# Database maintenance scripts and notes for the shared project
+database/
+
+# Private handover and project documentation
+/local_docs/
+
+# Local skills and design tooling / notes
+.claude/
+.impeccable/
+design-archive/
+design-reference/
+references/
+DESIGN.md
+PRODUCT.md
+
+# Temporary copy of the standalone Incomplete Exam agent (has its own .git,
+# .venv and a .env with credentials). Ported into
+# backend/app/agents/incomplete_exam/; delete this folder after the port.
+Incomplete-Exam-Eligibility-/
+
+# ---------------------------------------------------------------------------
+# Credentials and secrets (the .env.example templates stay included)
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+
+# ---------------------------------------------------------------------------
+# Environments and dependencies
+# ---------------------------------------------------------------------------
+.venv/
+venv/
+env/
+node_modules/
+
+# ---------------------------------------------------------------------------
+# Build output and caches
+# ---------------------------------------------------------------------------
+dist/
+dist-ssr/
+build/
+coverage/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.vite/
+.eslintcache
+*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Backups, exports and temporary files
+# ---------------------------------------------------------------------------
+backups/
+exports/
+*.bak
+*.backup
+*.dump
+*.zip
+*.csv
+tmp/
+temp/
+*.tmp
+*.temp
+*.log
+logs/
+
+# ---------------------------------------------------------------------------
+# Editor and operating-system files
+# ---------------------------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

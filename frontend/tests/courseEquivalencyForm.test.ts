@@ -1,0 +1,165 @@
+// The student Course Equivalency form: route, catalog entry, data layer, the
+// exact database calls, duplicate-click prevention, the confirmation after success,
+// blocked states, request details, and that Course Substitution is unchanged.
+// Static checks of the sources (no browser, backend or database). Run: npm test.
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { test } from 'node:test'
+import { academicRequestTypes } from '../src/data/academicRequests.ts'
+
+const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
+const APP = source('../src/App.tsx')
+const PAGE = source('../src/pages/CourseEquivalencyForm.tsx')
+const HOOK = source('../src/hooks/useCourseEquivalencyOptions.ts')
+const SERVICE = source('../src/services/courseEquivalency.ts')
+const DETAILS = source('../src/services/studentRequests.ts')
+const COMBO = source('../src/components/courseEquivalency/CourseCombobox.tsx')
+const CS_PAGE = source('../src/pages/CourseSubstitutionForm.tsx')
+const CS_SERVICE = source('../src/services/courseSubstitution.ts')
+
+test('the student route exists and is protected for students', () => {
+  assert.match(APP, /path="\/student\/services\/course-equivalency\/new"\s+element=\{\s+<ProtectedRoute requiredRole="student">\s+<CourseEquivalencyForm \/>/)
+})
+
+test('the catalog card starts the form and no longer says the course came from another institution', () => {
+  const entry = academicRequestTypes.find((r) => r.id === 'course-equivalency')
+  assert.ok(entry)
+  assert.equal(entry.startPath, '/student/services/course-equivalency/new')
+  assert.doesNotMatch(entry.description, /another institution|external/i)
+  assert.match(entry.description, /program change/i)
+})
+
+test('the page and hook use only the data layer (no direct Supabase, fetch, token or storage)', () => {
+  for (const [name, text] of Object.entries({ PAGE, HOOK })) {
+    for (const forbidden of [/\bsupabase\b/, /\bfetch\(/, /access_token/, /getSession/, /console\./, /localStorage/,
+      /\.rpc\(/, /service_role/i, /Program_ID/]) {
+      assert.doesNotMatch(text, forbidden, `${name} must not match ${forbidden}`)
+    }
+  }
+  assert.match(PAGE, /useCourseEquivalencyOptions\(\)/)
+  assert.match(PAGE, /await submitCourseEquivalencyRequest\(oldCourseId, newCourseId, reason\)/)
+})
+
+test('the service calls exactly the two database functions, with the exact parameter names and no student ID', () => {
+  assert.equal(SERVICE.match(/\.rpc\(/g)?.length, 2)
+  assert.match(SERVICE, /supabase\.rpc\('get_my_course_equivalency_options'\)/)
+  assert.match(SERVICE, /supabase\.rpc\('submit_course_equivalency_request', \{\s+p_old_course_id: oldCourseId,\s+p_new_course_id: newCourseId,\s+p_reason: reason\.trim\(\),\s+\}\)/)
+  assert.doesNotMatch(SERVICE, /student_id|Student_ID|studentId/i)
+  assert.doesNotMatch(SERVICE, /\.from\(|\.(insert|update|upsert|delete)\(/)
+  // The Request_ID is returned only after the database confirmed it.
+  assert.match(SERVICE, /if \(error\) throw new CourseEquivalencySubmitError\(submitErrorCode\(error\)\)/)
+  assert.match(SERVICE, /if \(typeof data !== 'string' \|\| data\.trim\(\) === ''\) throw new CourseEquivalencySubmitError\('unknown'\)/)
+})
+
+test('duplicate submissions are prevented and the form is locked while submitting', () => {
+  assert.match(PAGE, /if \(submittingRef\.current\) return\s+setAttempted\(true\)/)
+  // The guard is set before the await, so a double click sends one request.
+  assert.ok(PAGE.indexOf('submittingRef.current = true') < PAGE.indexOf('await submitCourseEquivalencyRequest'))
+  assert.match(PAGE, /submittingRef\.current = false/)
+  assert.match(PAGE, /disabled=\{submitting\}\s+aria-busy=\{submitting \|\| undefined\}/)
+  assert.match(PAGE, /if \(!oldCourseId \|\| !newCourseId \|\| Object\.keys\(errors\)\.length > 0\) return/)
+  assert.match(PAGE, /\{submitting \? 'Submitting…' : 'Submit Request'\}/)
+})
+
+// The confirmation section shown after a successful submission.
+const DONE = PAGE.slice(PAGE.indexOf('{submitted ? ('), PAGE.indexOf('{submitError && ('))
+const TRY_BLOCK = PAGE.slice(PAGE.indexOf('try {'), PAGE.indexOf('} catch (error)'))
+const CATCH_BLOCK = PAGE.slice(PAGE.indexOf('} catch (error)'), PAGE.indexOf('} finally {'))
+const FINALLY_BLOCK = PAGE.slice(PAGE.indexOf('} finally {'), PAGE.indexOf('const blocked ='))
+
+test('success shows the confirmation (not Request Details) only after the database returned the Request_ID', () => {
+  assert.match(TRY_BLOCK, /const requestId = await submitCourseEquivalencyRequest\(/)
+  assert.match(TRY_BLOCK, /setSubmitted\(\{\s+id: requestId,/)
+  assert.ok(TRY_BLOCK.indexOf('await submitCourseEquivalencyRequest') < TRY_BLOCK.indexOf('setSubmitted('))
+  // No automatic navigation to the request any more.
+  assert.doesNotMatch(TRY_BLOCK, /navigate\(/)
+  // The confirmation replaces the form, the errors and the blocked states.
+  assert.ok(PAGE.indexOf('{submitted ? (') < PAGE.indexOf('<form '))
+  assert.ok(PAGE.indexOf('{submitted ? (') < PAGE.indexOf('{submitError && ('))
+})
+
+test('the confirmation reuses the shared success pattern: check icon, heading, message and breadcrumb', () => {
+  assert.match(DONE, /<section className="rc-done pc-done" role="status" aria-labelledby="cef-done-title">/)
+  assert.match(DONE, /<span className="rc-done__icon" aria-hidden="true">\s+✓\s+<\/span>/)
+  assert.match(DONE, /<h2 id="cef-done-title" ref=\{doneHeadingRef\} tabIndex=\{-1\} className="rc-done__title">\s+Request submitted\s+<\/h2>/)
+  assert.match(DONE, /Course Equivalency request[\s\S]*has been submitted successfully for review\./)
+  // Focus moves to the heading for screen-reader and keyboard users.
+  assert.match(PAGE, /if \(submitted\) doneHeadingRef\.current\?\.focus\(\)/)
+  // The breadcrumb stays on the page above the confirmation.
+  assert.ok(PAGE.indexOf('<ServiceBreadcrumb serviceId="course-equivalency"') < PAGE.indexOf('{submitted ? ('))
+})
+
+test('the confirmation shows the Request_ID the database returned', () => {
+  assert.match(DONE, /<span className="rc-done__ref-label">Request ID<\/span>\s+<span className="rc-done__id">\{submitted\.id\}<\/span>/)
+})
+
+test('View request opens the submitted request and Back to dashboard opens the dashboard', () => {
+  assert.match(DONE, /onClick=\{\(\) => navigate\(requestDetailsPath\(submitted\.id\)\)\}>\s+View request\s+<\/button>/)
+  assert.match(DONE, /onClick=\{\(\) => navigate\('\/student'\)\}>\s+Back to dashboard\s+<\/button>/)
+})
+
+test('a failed submission stays on the form with the error and never shows the confirmation', () => {
+  assert.doesNotMatch(CATCH_BLOCK, /setSubmitted\(/)
+  assert.match(CATCH_BLOCK, /setSubmitError\(failure\.message\)/)
+  // Only a failure re-enables submitting.
+  assert.match(CATCH_BLOCK, /submittingRef\.current = false/)
+  assert.doesNotMatch(FINALLY_BLOCK, /submittingRef\.current = false/)
+})
+
+test('after a success the request cannot be submitted again, and a refresh never resubmits', () => {
+  // The guard stays set after success, so a late second click is ignored.
+  assert.equal(PAGE.match(/submittingRef\.current = false/g)?.length, 1)
+  // The confirmation is component state only (nothing persisted or passed in the
+  // URL or history), and the database call happens only in the submit handler.
+  assert.equal(PAGE.match(/submitCourseEquivalencyRequest\(/g)?.length, 1)
+  assert.doesNotMatch(PAGE, /sessionStorage|localStorage|useEffect\([^)]*submitCourseEquivalencyRequest/)
+})
+
+test('submission errors are shown as messages, and stale options are reloaded', () => {
+  assert.match(PAGE, /setSubmitError\(failure\.message\)/)
+  assert.match(PAGE, /if \(RELOAD_OPTIONS_CODES\.has\(failure\.code\)\)/)
+  assert.match(PAGE, /<p className="rc-alert" role="alert">/)
+})
+
+test('every blocked status shows an explanation instead of the form', () => {
+  assert.match(PAGE, /options\.status !== 'ok' \? BLOCKED_MESSAGES\[options\.status\] : null/)
+  assert.match(PAGE, /\{blocked\.title\}/)
+  assert.match(PAGE, /\{blocked\.text\}/)
+  assert.match(PAGE, /status === 'ready' && options\?\.status === 'ok' && program &&/)
+  // Direct ways back from a blocked state.
+  assert.match(PAGE, /<Link to="\/student" className="rc-submit">\s+Back to dashboard/)
+  // "Academic requests" is offered for the other blocked statuses, not without an approved Program Change.
+  assert.match(PAGE, /\{options\.status !== 'no_approved_program_change' && \(\s+<Link to="\/student" state=\{\{ scrollTo: CATALOG_ANCHOR_ID \}\} className="rc-button">\s+Academic requests\s+<\/Link>\s+\)\}/)
+})
+
+test('the form shows the applicable program (no study-plan version line), the best grade and the requirement type', () => {
+  assert.match(PAGE, /\{program\.programName\}/)
+  assert.doesNotMatch(PAGE, /Study plan version|program\.planVersion/)
+  assert.match(PAGE, /completedCourseOptions\(options\?\.oldCourses \?\? \[\]\)/)
+  assert.match(PAGE, /planCourseOptions\(options\?\.newCourses \?\? \[\]\)/)
+  assert.match(PAGE, /excludedId=\{oldCourseId\}/)
+  assert.match(COMBO, /\{course\.detail && <span className="cec-option__detail">\{course\.detail\}<\/span>\}/)
+  assert.match(COMBO, /\{hours && <span className="cec-option__hours">\{hours\}<\/span>\}/)
+})
+
+test('request details read the stored context and add it only when present', () => {
+  assert.match(DETAILS, /'Old_Course_ID, New_Course_ID, Reason, Program_Change_Request_ID, Old_Program_ID, Old_Program_Name, '\s+\+ 'New_Program_ID, New_Program_Name, Plan_Version, Old_Course_Grade, Old_Course_Term'/)
+  assert.match(DETAILS, /\.\.\.courseEquivalencyContextFields\(row\)/)
+})
+
+test('Course Substitution is unchanged: its page, service and picker contract still work as before', () => {
+  assert.match(CS_PAGE, /await submitCourseSubstitutionRequest\(originalId, proposedId, reason\)/)
+  assert.match(CS_SERVICE, /supabase\.rpc\('submit_course_substitution_request'/)
+  // Course Substitution never sets the picker's optional detail line.
+  assert.doesNotMatch(CS_PAGE, /\bdetail:/)
+  assert.doesNotMatch(CS_SERVICE, /\bdetail:/)
+})
+
+test('the form no longer mentions a C+ minimum or hides passed study-plan courses', () => {
+  assert.doesNotMatch(PAGE, /C\+/)
+  assert.doesNotMatch(PAGE, /not passed yet|already passed/)
+  // Neither course field has a helper line any more.
+  assert.doesNotMatch(PAGE, /hint=/)
+  assert.doesNotMatch(PAGE, /A course from your transcript with a recorded grade|A course in your new program’s current study plan/)
+  assert.match(PAGE, /You have no completed course with a recorded grade, so a course equivalency cannot be requested\./)
+})

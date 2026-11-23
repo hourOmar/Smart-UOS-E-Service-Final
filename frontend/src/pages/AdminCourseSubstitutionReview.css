@@ -1,0 +1,61 @@
+/* Course Substitution review: only what the Program Change and Incomplete
+   Exam review styles do not already cover. */
+
+/* A check that needs manual review (the shared cards style pass and fail). */
+.pcr-check[data-tone='review'] {
+  --pcr-fg: #6e4b00;
+  --pcr-bd: #e6cf98;
+  --pcr-tint: #fdf9f0;
+}
+
+.csr-term {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.csr-term dt {
+  font-size: 12.5px;
+  color: var(--proto-muted);
+}
+
+.csr-term dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--proto-heading);
+}
+
+/* Why a result is Manual review, and the warning on a suggested explanation
+   that may rely on unverified course offerings (both use .pcr-warning). */
+.csr-review-summary,
+.csr-uncertain {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.csr-uncertain {
+  align-self: stretch;
+}
+
+.csr-review-summary__intro,
+.csr-uncertain__text {
+  margin: 0;
+}
+
+.csr-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+  overflow-wrap: anywhere;
+}
+
+.csr-gemini {
+  margin: 0;
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}

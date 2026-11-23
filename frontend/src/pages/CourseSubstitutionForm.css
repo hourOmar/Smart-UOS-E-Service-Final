@@ -1,0 +1,49 @@
+/* Course Substitution request form: only what the Raise Capacity and Program
+   Change form styles do not already cover. Also loaded by the Course
+   Equivalency form (csf-page, csf-form, the field hint). */
+
+.csf-form .pc-details {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Hint under a course field's label (used by the shared CourseCombobox). */
+.csf-picker__hint {
+  font-size: 13px;
+  color: var(--proto-muted);
+}
+
+/* The program whose study plan provides the courses. */
+.csf-program {
+  margin-bottom: 20px;
+}
+
+/* Shown instead of the form when a request cannot be made (no student record,
+   no study plan for the program, or an unreadable reply). */
+.csf-blocked {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 24px;
+  border: 1px solid #e2e6e0;
+  border-left: 4px solid #b7791f;
+  border-radius: 8px;
+  background: #ffffff;
+}
+.csf-blocked__title {
+  margin: 0;
+  font-size: 17px;
+  color: var(--proto-heading);
+}
+.csf-blocked__text {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--proto-body);
+}
+.csf-blocked__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
