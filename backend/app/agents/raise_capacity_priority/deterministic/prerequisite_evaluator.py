@@ -1,294 +1,214 @@
 """
-Deterministically evaluates whether a student satisfies a requested
-course's official UoS prerequisite requirement, using the student's
-Takes records and the approved grade policy. Never returns a priority —
-only SATISFIED / NOT_SATISFIED / UNRESOLVED / CONFLICT plus the
-evidence behind that status.
+Factor 6 — deterministic prerequisite evaluation against the validated
+local knowledge/course_prerequisites.json and the student's Takes records.
+Never returns a priority: only SATISFIED / NOT_SATISFIED / UNRESOLVED /
+CONFLICT plus the evidence behind that status.
 
-Design decisions worth stating explicitly (see Phase 4 report):
+Record use (approved decisions 1 and 2):
+- Only records from terms BEFORE the requested term can complete a
+  prerequisite: a passing grade (grade_policy.json) -> satisfied; F, WF, FA
+  -> not satisfied; W, I, NULL and any unrecognized grade -> unresolved.
+- A record in the requested term is current enrolment (NULL grade, or a
+  passing grade). It satisfies CO and PRE_OR_CO, never PRE. A failing or
+  withdrawn grade in the requested term is not enrolment; an unrecognized
+  one (e.g. W, I) leaves concurrent enrolment unresolved.
+- Records AFTER the requested term are ignored.
+- A record whose order cannot be determined (unsupported semester suffix)
+  is unresolved.
 
-1. UoS conflict wins first. If Phase 3 found the prerequisite text
-   materially disagrees across page sections (conflict=True), we do not
-   pick a version to evaluate — status is CONFLICT immediately.
+Modes: PRE (completed before), CO (enrolled in the requested term only),
+PRE_OR_CO (either). The knowledge file expresses PRE and PRE_OR_CO through
+concurrent_allowed; CO is supported for future use.
 
-2. Choosing which source to evaluate. When there is no conflict, several
-   sources may still exist (Degree Requirements, Study Plan, Course
-   Description); we prefer Degree Requirements, then Study Plan, then
-   Course Description, since that is the page's primary structured
-   source (see Phase 3 notes).
+STANDING: satisfied when Student.Completed_Hours (earned credit hours) is at
+least the standing's prerequisite_min_earned_credits from the knowledge
+file; missing or invalid completed hours are unresolved.
 
-3. A course leaf with NO Takes record at all is NOT_SATISFIED (a clear
-   fact: never completed) — not UNRESOLVED. UNRESOLVED is reserved for
-   a Takes record that exists but has a null/unrecognized grade, per
-   the instruction that "a null/missing/unrecognized grade must not
-   automatically count as passing or failing."
-
-4. PRE_OR_CO. Ordinary PREREQUISITE course leaves are satisfied by any
-   passing-grade Takes record for that course. PRE_OR_CO leaves are
-   ALSO satisfied by a Takes record for that course whose Term equals
-   the current request's own Term — a concurrent-registration fact we
-   can check reliably from data we already have (no guessing about
-   what "currently enrolled" means beyond term equality). If neither
-   condition holds and no unresolved grade is present, PRE_OR_CO is
-   NOT_SATISFIED like an ordinary prerequisite.
-
-5. STANDING leaves (e.g. "Junior Standing") are always UNRESOLVED — we
-   were given no reliable, confirmed way to derive class standing from
-   the data available, and the instructions explicitly forbid guessing
-   one (e.g. a Completed_Hours threshold was never confirmed).
-
-6. AND/OR combination uses three-valued logic: AND is NOT_SATISFIED if
-   any branch is NOT_SATISFIED (even if others are unresolved — the
-   requirement is already unmet), SATISFIED only if every branch is
-   SATISFIED, else UNRESOLVED. OR is the mirror.
+AND / OR use three-valued logic: AND is NOT_SATISFIED if any branch is
+NOT_SATISFIED, SATISFIED only if every branch is; OR is the mirror;
+otherwise UNRESOLVED.
 """
 
 from typing import Optional
 
 from ..deterministic.grade_policy import classify_grade
-from ..retrieval.uos_prerequisite_parser import collect_course_ids
+from ..deterministic.prerequisite_knowledge import SOURCE, PrerequisiteKnowledge, referenced_course_ids
+from ..retrieval.academic_history import term_relation
 from ..schemas.academic_history import TakesRecord
 from ..schemas.deterministic import (
     PrerequisiteCompletionEvidence,
     PrerequisiteLeafEvaluation,
     TakesRecordEvaluation,
 )
-from ..schemas.uos import ParsedPrerequisite, PrerequisiteEvidence, PrerequisiteNode
+from ..schemas.prerequisites import CourseRequirement, RequirementGroup, RequirementNode, StandingRequirement
 
-_SOURCE_PRIORITY = ("DEGREE_REQUIREMENTS", "STUDY_PLAN", "COURSE_DESCRIPTION")
-
-
-def required_prerequisite_course_ids(uos_prereq_evidence: PrerequisiteEvidence) -> set[int]:
-    """Every course_id referenced across ALL sources — a superset used
-    to fetch Takes records once, regardless of which single source ends
-    up being evaluated."""
-    ids: set[int] = set()
-    for parsed in uos_prereq_evidence.by_source:
-        ids |= collect_course_ids(parsed.expression)
-    return ids
+__all__ = [
+    "evaluate_course_leaf",
+    "evaluate_prerequisite_completion",
+    "evaluate_requirement",
+    "evaluate_standing_leaf",
+    "mode_for",
+    "not_evaluated_prerequisite_evidence",
+    "referenced_course_ids",
+]
 
 
-def evaluate_prerequisite_completion(
-    course_id: int,
-    uos_prereq_evidence: PrerequisiteEvidence,
-    takes_records: list[TakesRecord],
-    current_request_term: Optional[int],
-) -> PrerequisiteCompletionEvidence:
-    if uos_prereq_evidence.conflict:
-        return PrerequisiteCompletionEvidence(
-            course_id=course_id,
-            status="CONFLICT",
-            reason=(
-                "UoS prerequisite information conflicts across page "
-                "sections; not choosing one version."
-            ),
-            source_section_used=None,
-            relation=None,
-            requirement_expression=None,
-            leaf_evaluations=[],
-            uos_conflict=True,
-            uos_conflict_reason=uos_prereq_evidence.conflict_reason,
-        )
-
-    if not uos_prereq_evidence.course_found:
-        return PrerequisiteCompletionEvidence(
-            course_id=course_id,
-            status="UNRESOLVED",
-            reason="This course's prerequisite requirement was not found on the official UoS page.",
-            source_section_used=None,
-            relation=None,
-            requirement_expression=None,
-            leaf_evaluations=[],
-            uos_conflict=False,
-            uos_conflict_reason=None,
-        )
-
-    chosen = _select_primary_source(uos_prereq_evidence.by_source)
-    if chosen is None:
-        raw_texts = "; ".join(p.raw_text for p in uos_prereq_evidence.by_source)
-        return PrerequisiteCompletionEvidence(
-            course_id=course_id,
-            status="UNRESOLVED",
-            reason=f"Prerequisite text could not be parsed into a structure: {raw_texts}",
-            source_section_used=None,
-            relation=None,
-            requirement_expression=None,
-            leaf_evaluations=[],
-            uos_conflict=False,
-            uos_conflict_reason=None,
-        )
-
-    leaves: list[PrerequisiteLeafEvaluation] = []
-    overall_status = _evaluate_node(
-        chosen.expression, takes_records, chosen.relation, current_request_term, leaves
-    )
-
-    return PrerequisiteCompletionEvidence(
-        course_id=course_id,
-        status=overall_status,
-        reason=_overall_reason(overall_status, chosen),
-        source_section_used=chosen.source_section,
-        relation=chosen.relation,
-        requirement_expression=chosen.expression,
-        leaf_evaluations=leaves,
-        uos_conflict=False,
-        uos_conflict_reason=None,
-    )
+def mode_for(node: CourseRequirement) -> str:
+    return "PRE_OR_CO" if node.concurrent_allowed else "PRE"
 
 
-def _select_primary_source(by_source: list[ParsedPrerequisite]) -> Optional[ParsedPrerequisite]:
-    by_section = {p.source_section: p for p in by_source if p.parseable}
-    for section in _SOURCE_PRIORITY:
-        if section in by_section:
-            return by_section[section]
-    return None
-
-
-def _overall_reason(status: str, chosen: ParsedPrerequisite) -> str:
-    if chosen.expression is None:
-        return "No prerequisite is required for this course."
-    return (
-        f"Evaluated from {chosen.source_section} ({chosen.relation}) "
-        f"raw text {chosen.raw_text!r}: {status}."
-    )
-
-
-def _evaluate_node(
-    node: Optional[PrerequisiteNode],
-    takes_records: list[TakesRecord],
-    relation: str,
-    current_request_term: Optional[int],
-    leaves: list[PrerequisiteLeafEvaluation],
-) -> str:
-    if node is None:
-        return "SATISFIED"
-
-    if node.kind == "STANDING":
-        leaves.append(
-            PrerequisiteLeafEvaluation(
-                kind="STANDING",
-                course_id=None,
-                standing_text=node.text,
-                status="UNRESOLVED",
-                reason=(
-                    "Standing requirements cannot be verified "
-                    "deterministically from the available data."
-                ),
-                matched_takes_records=[],
-            )
-        )
-        return "UNRESOLVED"
-
-    if node.kind == "COURSE":
-        leaf = _evaluate_course_leaf(node.course_id, takes_records, relation, current_request_term)
-        leaves.append(leaf)
-        return leaf.status
-
-    # GROUP
-    child_statuses = [
-        _evaluate_node(child, takes_records, relation, current_request_term, leaves)
-        for child in node.items
-    ]
-    if node.operator == "AND":
-        if any(status == "NOT_SATISFIED" for status in child_statuses):
+def combine(operator: str, statuses: list[str]) -> str:
+    if operator == "ALL_OF":
+        if any(s == "NOT_SATISFIED" for s in statuses):
             return "NOT_SATISFIED"
-        if all(status == "SATISFIED" for status in child_statuses):
+        if all(s == "SATISFIED" for s in statuses):
             return "SATISFIED"
         return "UNRESOLVED"
-
-    # OR
-    if any(status == "SATISFIED" for status in child_statuses):
+    if any(s == "SATISFIED" for s in statuses):
         return "SATISFIED"
-    if all(status == "NOT_SATISFIED" for status in child_statuses):
+    if all(s == "NOT_SATISFIED" for s in statuses):
         return "NOT_SATISFIED"
     return "UNRESOLVED"
 
 
-def _evaluate_course_leaf(
-    course_id: int,
-    takes_records: list[TakesRecord],
-    relation: str,
-    current_request_term: Optional[int],
+def evaluate_course_leaf(
+    course_id: str, mode: str, transcript: list[TakesRecord], request_term: int
 ) -> PrerequisiteLeafEvaluation:
-    matching = [record for record in takes_records if record.course_id == course_id]
-
-    if not matching:
-        return PrerequisiteLeafEvaluation(
-            kind="COURSE",
-            course_id=course_id,
-            standing_text=None,
-            status="NOT_SATISFIED",
-            reason=f"No Takes record found for course {course_id}.",
-            matched_takes_records=[],
-        )
-
-    matched_evaluations: list[TakesRecordEvaluation] = []
-    passing_found = False
-    concurrent_found = False
-    unresolved_found = False
-
-    for record in matching:
+    evaluations: list[TakesRecordEvaluation] = []
+    passed_before = unresolved_before = enrolled_now = enrolment_unresolved = unknown_order = False
+    for record in transcript:
+        if record.course_id != course_id:
+            continue
+        relation = term_relation(record.term, request_term)
         grade_status = classify_grade(record.grade)
-        matched_evaluations.append(
-            TakesRecordEvaluation(
-                course_id=record.course_id,
-                grade=record.grade,
-                term=record.term,
-                grade_status=grade_status,
-            )
-        )
-        if grade_status == "PASSING":
-            passing_found = True
-        elif grade_status in ("MISSING", "UNRECOGNIZED"):
-            unresolved_found = True
-        if (
-            relation == "PRE_OR_CO"
-            and current_request_term is not None
-            and record.term == current_request_term
-        ):
-            concurrent_found = True
+        evaluations.append(TakesRecordEvaluation(
+            course_id=record.course_id, grade=record.grade, term=record.term,
+            term_relation=relation, grade_status=grade_status,
+        ))
+        if relation == "BEFORE_REQUEST_TERM":
+            if grade_status == "PASSING":
+                passed_before = True
+            elif grade_status in ("MISSING", "UNRECOGNIZED"):
+                unresolved_before = True
+        elif relation == "REQUEST_TERM":
+            if grade_status in ("MISSING", "PASSING"):
+                enrolled_now = True
+            elif grade_status == "UNRECOGNIZED":
+                enrolment_unresolved = True
+        elif relation == "UNKNOWN_TERM":
+            unknown_order = True
 
-    if passing_found:
-        return PrerequisiteLeafEvaluation(
-            kind="COURSE",
-            course_id=course_id,
-            standing_text=None,
-            status="SATISFIED",
-            reason=f"A passing grade was found for course {course_id}.",
-            matched_takes_records=matched_evaluations,
+    can_complete = mode in ("PRE", "PRE_OR_CO")
+    can_enrol = mode in ("CO", "PRE_OR_CO")
+    if can_complete and passed_before:
+        status, reason = "SATISFIED", f"{course_id} was passed in a term before the requested term."
+    elif can_enrol and enrolled_now:
+        status, reason = "SATISFIED", f"The student is enrolled in {course_id} in the requested term ({mode})."
+    elif (can_complete and unresolved_before) or (can_enrol and enrolment_unresolved) or unknown_order:
+        status = "UNRESOLVED"
+        reason = (
+            f"Record(s) for {course_id} have a grade that is NULL, withdrawn, incomplete or not in the grade "
+            "policy, or a term whose order cannot be determined; completion cannot be confirmed."
         )
-
-    if relation == "PRE_OR_CO" and concurrent_found:
-        return PrerequisiteLeafEvaluation(
-            kind="COURSE",
-            course_id=course_id,
-            standing_text=None,
-            status="SATISFIED",
-            reason=(
-                f"Concurrent registration in course {course_id} during the "
-                "same term as this request satisfies the Pre/Co requirement."
-            ),
-            matched_takes_records=matched_evaluations,
-        )
-
-    if unresolved_found:
-        return PrerequisiteLeafEvaluation(
-            kind="COURSE",
-            course_id=course_id,
-            standing_text=None,
-            status="UNRESOLVED",
-            reason=(
-                f"Existing Takes record(s) for course {course_id} have a "
-                "null/unrecognized grade; completion cannot be determined."
-            ),
-            matched_takes_records=matched_evaluations,
-        )
-
+    else:
+        status = "NOT_SATISFIED"
+        if not evaluations:
+            reason = f"No transcript record for {course_id}."
+        elif mode == "PRE":
+            reason = f"{course_id} was not passed in any term before the requested term."
+        elif mode == "CO":
+            reason = f"The student is not enrolled in {course_id} in the requested term."
+        else:
+            reason = f"{course_id} was neither passed before nor taken in the requested term."
     return PrerequisiteLeafEvaluation(
-        kind="COURSE",
-        course_id=course_id,
-        standing_text=None,
-        status="NOT_SATISFIED",
-        reason=f"No passing grade found for course {course_id}.",
-        matched_takes_records=matched_evaluations,
+        kind="COURSE", course_id=course_id, mode=mode, standing_text=None, required_earned_credits=None,
+        completed_hours=None, status=status, reason=reason, matched_takes_records=evaluations,
+    )
+
+
+def evaluate_standing_leaf(
+    standing_text: str, completed_hours: Optional[int], knowledge: PrerequisiteKnowledge
+) -> PrerequisiteLeafEvaluation:
+    threshold = knowledge.standing_threshold(standing_text)
+    if threshold is None:
+        status, reason = "UNRESOLVED", f"{standing_text} is not defined in the prerequisite knowledge file."
+    elif completed_hours is None:
+        status, reason = "UNRESOLVED", "Student.Completed_Hours is missing; standing cannot be evaluated."
+    elif completed_hours < 0:
+        status, reason = "UNRESOLVED", "Student.Completed_Hours is negative (invalid); standing cannot be evaluated."
+    elif completed_hours >= threshold:
+        status = "SATISFIED"
+        reason = f"{completed_hours} earned credit hours meet the {threshold} required for {standing_text}."
+    else:
+        status = "NOT_SATISFIED"
+        reason = f"{completed_hours} earned credit hours are below the {threshold} required for {standing_text}."
+    return PrerequisiteLeafEvaluation(
+        kind="STANDING", course_id=None, mode=None, standing_text=standing_text, required_earned_credits=threshold,
+        completed_hours=completed_hours, status=status, reason=reason, matched_takes_records=[],
+    )
+
+
+def evaluate_requirement(
+    node: RequirementNode,
+    transcript: list[TakesRecord],
+    request_term: int,
+    completed_hours: Optional[int],
+    knowledge: PrerequisiteKnowledge,
+    leaves: Optional[list[PrerequisiteLeafEvaluation]] = None,
+) -> str:
+    """Status of one requirement tree (leaf evaluations appended to `leaves`)."""
+    if isinstance(node, CourseRequirement):
+        leaf = evaluate_course_leaf(node.course_id, mode_for(node), transcript, request_term)
+    elif isinstance(node, StandingRequirement):
+        leaf = evaluate_standing_leaf(node.text, completed_hours, knowledge)
+    else:
+        assert isinstance(node, RequirementGroup)
+        statuses = [
+            evaluate_requirement(item, transcript, request_term, completed_hours, knowledge, leaves)
+            for item in node.items
+        ]
+        return combine(node.type, statuses)
+    if leaves is not None:
+        leaves.append(leaf)
+    return leaf.status
+
+
+def _evidence(course_id, status, knowledge_status, reason, expression=None, leaves=None):
+    return PrerequisiteCompletionEvidence(
+        course_id=course_id, status=status, knowledge_status=knowledge_status, reason=reason,
+        requirement_expression=expression, leaf_evaluations=leaves or [], source=SOURCE,
+    )
+
+
+def not_evaluated_prerequisite_evidence(course_id: str, reason: str) -> PrerequisiteCompletionEvidence:
+    return _evidence(course_id, "UNRESOLVED", "NOT_EVALUATED", reason)
+
+
+def evaluate_prerequisite_completion(
+    course_id: str,
+    knowledge: PrerequisiteKnowledge,
+    transcript: list[TakesRecord],
+    request_term: int,
+    completed_hours: Optional[int],
+) -> PrerequisiteCompletionEvidence:
+    entry = knowledge.entry(course_id)
+    if entry is None:
+        return _evidence(course_id, "UNRESOLVED", "MISSING_FROM_KNOWLEDGE_BASE",
+                         "The requested course is not in the prerequisite knowledge file; its requirement is unknown.")
+    if entry.prerequisite_status == "CONFLICTING":
+        return _evidence(course_id, "CONFLICT", "CONFLICTING",
+                         "The prerequisite knowledge file records conflicting requirements for this course.")
+    if entry.prerequisite_status != "VERIFIED":
+        return _evidence(course_id, "UNRESOLVED", "NOT_VERIFIED",
+                         f"The prerequisite requirement is not verified ({entry.prerequisite_status}).")
+    if entry.requirement is None:
+        return _evidence(course_id, "SATISFIED", "NO_PREREQUISITES",
+                         "The course explicitly has no prerequisites.")
+
+    leaves: list[PrerequisiteLeafEvaluation] = []
+    status = evaluate_requirement(entry.requirement, transcript, request_term, completed_hours, knowledge, leaves)
+    return _evidence(
+        course_id, status, "REQUIREMENT_DEFINED",
+        f"Evaluated the verified requirement from the prerequisite knowledge file: {status}.",
+        entry.requirement, leaves,
     )

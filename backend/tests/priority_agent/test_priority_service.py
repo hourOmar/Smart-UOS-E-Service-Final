@@ -383,15 +383,15 @@ def test_factor_signals_are_saved_with_the_result(db, monkeypatch):
     assert db.saved[0][2]["factor_signals"] == SIGNALS
 
 
-def test_contradicting_signals_are_a_failed_run_and_save_nothing(db, monkeypatch):
-    from app.agents.raise_capacity_priority.pipeline.factor_signals import FactorSignalMismatchError
-
-    def boom(rid):
-        raise FactorSignalMismatchError(["prerequisite", "previous_attempts"])
-    monkeypatch.setattr(agent, "prioritize_raise_capacity_request", boom)
-    assert service.execute_run(7, RID) == "failed" and not db.saved
-    assert db.failed[7] == ("The agent's factor signals did not match the evidence "
-                            "(prerequisite, previous_attempts); nothing was saved.")
+def test_any_structurally_valid_signals_are_saved_unchanged(db, monkeypatch):
+    # No academic enforcement: whatever valid signals Gemini gives are stored as given.
+    signals = {**SIGNALS, "prerequisite": "HIGHER", "previous_attempts": "LOWER", "graduation": "REVIEW"}
+    given = AgentOutcome(result=FinalAgentResult(**result(priority="HIGH", factor_signals=signals)),
+                         evidence=_evidence(), model="m-1")
+    monkeypatch.setattr(agent, "prioritize_raise_capacity_request", lambda rid: given)
+    assert service.execute_run(7, RID) == "saved"
+    assert db.saved[0][1] == "HIGH"
+    assert db.saved[0][2]["factor_signals"] == signals
 
 
 @pytest.mark.parametrize("outcome_text", ["discarded", "not_running"])

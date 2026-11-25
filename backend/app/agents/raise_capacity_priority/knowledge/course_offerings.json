@@ -1,0 +1,536 @@
+{
+  "program_id": "1501",
+  "program_name": "Bachelor of Science in Computer Science",
+  "source": "User-provided course offerings document and user-confirmed Digital Logic Design offerings and course ID corrections",
+  "source_verification_date": null,
+  "status_definitions": {
+    "YES": "Source lists course as offered in this semester.",
+    "NO": "Source indicates course is not offered in this semester.",
+    "UNKNOWN": "Source does not specify offering in this semester."
+  },
+  "limitations": "Usual offering information, not a guarantee of future availability. Does not establish academic equivalence or substitution eligibility.",
+  "courses": [
+    {
+      "course_id": "0201102",
+      "course_name": "Arabic Language",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "0202112",
+      "course_name": "English for Academic Purposes",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1501100",
+      "course_name": "Introduction to IT",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "0104100",
+      "course_name": "Islamic Culture",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "0302200",
+      "course_name": "Fundamentals of Innovation and Entrepreneurship",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "0204102",
+      "course_name": "UAE Society",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1430110",
+      "course_name": "Physics I for Sciences",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1430116",
+      "course_name": "Physics I Lab",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1420101",
+      "course_name": "General Chemistry I",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1420102",
+      "course_name": "General Chemistry I Lab",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1440131",
+      "course_name": "Calculus I",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1501116",
+      "course_name": "Programming I",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1502201",
+      "course_name": "Digital Logic Design",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1502202",
+      "course_name": "Digital Logic Design Lab",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1501211",
+      "course_name": "Programming II",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1501215",
+      "course_name": "Data Structures",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1501246",
+      "course_name": "Object Oriented Design with Java",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501252",
+      "course_name": "Computer Organization and Assembly Language",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501263",
+      "course_name": "Introduction to Database Management System",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1501279",
+      "course_name": "Discrete Structures",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501319",
+      "course_name": "Programming Languages and Paradigms",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501322",
+      "course_name": "Professional, Social and Ethical Issues in CS",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501352",
+      "course_name": "Operating Systems",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501330",
+      "course_name": "Introduction to Artificial Intelligence",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501366",
+      "course_name": "Software Engineering",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501250",
+      "course_name": "Networking Fundamentals",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501371",
+      "course_name": "Design and Analysis of Algorithms",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501372",
+      "course_name": "Formal Languages and Automata Theory",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501394",
+      "course_name": "Junior Project in CS",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501397",
+      "course_name": "CO-OP Summer Training",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1501494",
+      "course_name": "Senior Project in CS",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501459",
+      "course_name": "Information Security",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501454",
+      "course_name": "Cloud Computing",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1440132",
+      "course_name": "Calculus II",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1440211",
+      "course_name": "Linear Algebra",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1440281",
+      "course_name": "Introduction to Probability and Statistics",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "0202213",
+      "course_name": "Critical Reading and Writing",
+      "offerings": {
+        "fall": "YES",
+        "spring": "YES",
+        "summer": "YES"
+      }
+    },
+    {
+      "course_id": "1501341",
+      "course_name": "Web Programming",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501342",
+      "course_name": "2D/3D Computer Animation",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501343",
+      "course_name": "Interactive 3D Design",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501344",
+      "course_name": "2D Character Design",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501355",
+      "course_name": "Computer Architecture",
+      "offerings": {
+        "fall": "UNKNOWN",
+        "spring": "UNKNOWN",
+        "summer": "UNKNOWN"
+      }
+    },
+    {
+      "course_id": "1501365",
+      "course_name": "Advanced Database System",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501370",
+      "course_name": "Numerical Methods",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501433",
+      "course_name": "Introduction to Computer Vision and Image Processing",
+      "offerings": {
+        "fall": "UNKNOWN",
+        "spring": "UNKNOWN",
+        "summer": "UNKNOWN"
+      }
+    },
+    {
+      "course_id": "1501440",
+      "course_name": "Introduction to Computer Graphics",
+      "offerings": {
+        "fall": "UNKNOWN",
+        "spring": "UNKNOWN",
+        "summer": "UNKNOWN"
+      }
+    },
+    {
+      "course_id": "1501441",
+      "course_name": "Multimedia Technology",
+      "offerings": {
+        "fall": "UNKNOWN",
+        "spring": "UNKNOWN",
+        "summer": "UNKNOWN"
+      }
+    },
+    {
+      "course_id": "1501442",
+      "course_name": "3D Character Animation and Visual FX",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501443",
+      "course_name": "Human Computer Interaction",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501444",
+      "course_name": "Game Design and Development",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501445",
+      "course_name": "IT Application in E-Commerce",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501451",
+      "course_name": "Computer Networks",
+      "offerings": {
+        "fall": "UNKNOWN",
+        "spring": "UNKNOWN",
+        "summer": "UNKNOWN"
+      }
+    },
+    {
+      "course_id": "1501458",
+      "course_name": "Mobile Application and Design",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501465",
+      "course_name": "Development of Web Application",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501474",
+      "course_name": "Compiler Design",
+      "offerings": {
+        "fall": "UNKNOWN",
+        "spring": "UNKNOWN",
+        "summer": "UNKNOWN"
+      }
+    },
+    {
+      "course_id": "1501490",
+      "course_name": "Topics in Computer Science I",
+      "offerings": {
+        "fall": "YES",
+        "spring": "NO",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501491",
+      "course_name": "Topics in Computer Science II",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    },
+    {
+      "course_id": "1501492",
+      "course_name": "Special Topics in IT",
+      "offerings": {
+        "fall": "NO",
+        "spring": "YES",
+        "summer": "NO"
+      }
+    }
+  ]
+}

@@ -1,43 +1,44 @@
 """
-Pydantic schemas for a student's Takes history against the requested
-course (Supabase Takes table).
+Pydantic schemas for a student's Takes (transcript) records.
 
-`matches_current_request_context` flags a Takes row whose Section_ID and
-Term are identical to the current Raise_Capacity request's own
-Section_ID/Term. Such a row is very likely the student's current-term
-registration tied to this very request, not a genuinely completed
-previous attempt, so it is excluded from number_of_attempts/
-attempted_before but kept in `records` for transparency rather than
-silently discarded.
+Every record carries its term_relation to the requested academic term:
+- BEFORE_REQUEST_TERM: a genuine earlier record (counts as a previous
+  attempt and can complete a prerequisite);
+- REQUEST_TERM: the requested term itself (current enrolment; never a
+  previous attempt, regardless of section);
+- AFTER_REQUEST_TERM: a future record (ignored everywhere);
+- UNKNOWN_TERM: the term (or the request term) has an unsupported
+  semester suffix, so the order cannot be determined.
+Records are kept with their relation rather than silently discarded.
 """
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
+TermRelation = Literal["BEFORE_REQUEST_TERM", "REQUEST_TERM", "AFTER_REQUEST_TERM", "UNKNOWN_TERM"]
+
 
 class PreviousAttemptRecord(BaseModel):
-    course_id: int  # integer
+    course_id: str  # text, leading zeros preserved
     grade: Optional[str]
-    section_id: str  # character varying
+    section_id: str
     term: int
-    matches_current_request_context: bool
+    term_relation: TermRelation
 
 
 class PreviousAttemptsSummary(BaseModel):
-    attempted_before: bool
+    status: Literal["NEVER_ATTEMPTED", "PREVIOUSLY_ATTEMPTED", "UNKNOWN"]
+    attempted_before: Optional[bool]
     number_of_attempts: int
     records: list[PreviousAttemptRecord]
 
 
 class TakesRecord(BaseModel):
-    """A raw Takes row for an arbitrary course (Phase 4 prerequisite
-    evaluation). Unlike PreviousAttemptRecord, this is not scoped to the
-    requested course and carries no matches_current_request_context flag
-    — it is used to check completion of the requested course's
-    PREREQUISITE courses, not the requested course itself."""
+    """A raw Takes row for any course (used for prerequisite and dependent
+    course evaluation)."""
 
-    course_id: int
+    course_id: str  # text, leading zeros preserved
     grade: Optional[str]
     section_id: str
     term: int

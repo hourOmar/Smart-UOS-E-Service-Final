@@ -1,1 +1,1 @@
-"""Database and UoS-page retrieval (facts only)."""
+"""Read-only database retrieval (facts only)."""

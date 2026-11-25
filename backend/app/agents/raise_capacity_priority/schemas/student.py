@@ -14,5 +14,5 @@ class StudentAcademicProfile(BaseModel):
     student_name: str
     cgpa: Optional[float]
     completed_hours: Optional[int]
-    program_id: Optional[int]  # smallint, nullable
+    program_id: Optional[str]  # text, nullable, leading zeros preserved
     expected_graduation_term: Optional[int]

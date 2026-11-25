@@ -1,5 +1,5 @@
 """
-Pydantic models for Gemini's structured prioritization decision (Phase 6)
+Pydantic models for Gemini's structured prioritization decision
 and the final agent result. Gemini's raw JSON response is validated
 against PriorityDecision — an invalid priority value, missing reasoning,
 empty reasoning, or a missing/empty factor explanation all fail Pydantic

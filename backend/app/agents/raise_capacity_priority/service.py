@@ -46,10 +46,7 @@ from app.core.gemini import GeminiUnavailableError, describe_failure, sanitize
 from . import AGENT_VERSION
 from . import agent
 from . import repository as repo
-from .integrations.uos_client import UoSPageFetchError
-from .pipeline.factor_signals import FactorSignalMismatchError
 from .retrieval.errors import RetrievalError
-from .retrieval.uos_errors import UoSRetrievalError
 from .schemas.priority_decision import FinalAgentResult
 
 log = logging.getLogger(__name__)
@@ -288,12 +285,8 @@ def _failure_message(exc: Exception, run_id: int, request_id: str) -> str:
     """Safe to store and show to staff: sanitized, no evidence values."""
     if isinstance(exc, GeminiUnavailableError):
         return str(exc)
-    if isinstance(exc, FactorSignalMismatchError):
-        return str(exc)  # factor names only
     if isinstance(exc, RetrievalError):
         return f"Evidence could not be collected: {sanitize(str(exc))}"
-    if isinstance(exc, (UoSRetrievalError, UoSPageFetchError)):
-        return f"The UoS degree page could not be used: {sanitize(str(exc))}"
     if isinstance(exc, ValidationError):
         fields = ", ".join(".".join(str(p) for p in e["loc"]) for e in exc.errors()[:3])
         return f"Evidence did not have the expected shape ({fields})."

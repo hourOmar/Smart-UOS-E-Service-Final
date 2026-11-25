@@ -4,6 +4,6 @@ from pydantic import BaseModel
 
 
 class ProgramInfo(BaseModel):
-    program_id: int  # smallint
+    program_id: str  # text, leading zeros preserved
     program_name: str
     college_name: str

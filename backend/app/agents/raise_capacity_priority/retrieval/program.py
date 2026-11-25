@@ -16,7 +16,7 @@ from ..schemas.program import ProgramInfo
 _COLUMNS = "Program_ID, Program_Name, College_Name"
 
 
-def get_program(client: Any, program_id: Optional[int]) -> Optional[ProgramInfo]:
+def get_program(client: Any, program_id: Optional[str]) -> Optional[ProgramInfo]:
     if program_id is None:
         return None
 

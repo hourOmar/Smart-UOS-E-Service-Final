@@ -1,6 +1,6 @@
 """
 Loads the approved grade policy from
-app/knowledge/raise_capacity/grade_policy.json and classifies a single
+app/agents/raise_capacity_priority/knowledge/grade_policy.json and classifies a single
 grade string against it. This is the only place passing/failing grade
 lists exist — nothing else in the codebase should hardcode a grade.
 
@@ -11,12 +11,11 @@ evidence.
 """
 
 import json
-from pathlib import Path
 from typing import Literal, Optional
 
-_POLICY_PATH = (
-    Path(__file__).resolve().parents[1] / "knowledge" / "raise_capacity" / "grade_policy.json"
-)
+from .. import KNOWLEDGE_DIR
+
+_POLICY_PATH = KNOWLEDGE_DIR / "grade_policy.json"
 
 GradeStatus = Literal["PASSING", "FAILING", "UNRECOGNIZED", "MISSING"]
 

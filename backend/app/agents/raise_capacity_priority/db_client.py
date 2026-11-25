@@ -21,7 +21,11 @@ from typing import Any
 from sqlalchemy import bindparam, text
 from sqlalchemy.engine import Connection
 
-TABLES = frozenset({"Request", "Raise_Capacity", "Student", "Program", "Course", "Section", "Takes"})
+TABLES = frozenset({
+    "Request", "Raise_Capacity", "Student", "Program", "Course", "Section", "Takes",
+    # Read through the backend role's existing column-level grants.
+    "Program_Study_Plan_Course", "Program_Study_Plan_Total",
+})
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 

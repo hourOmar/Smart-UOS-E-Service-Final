@@ -1,0 +1,50 @@
+{
+  "raise_capacity_prioritization_rules": [
+    {
+      "rule_id": 1,
+      "name": "Graduation Proximity",
+      "description": "Students closer to graduation generally receive greater priority, particularly when delaying the requested course could delay graduation."
+    },
+    {
+      "rule_id": 2,
+      "name": "Degree Progress",
+      "description": "Students with fewer remaining credit hours generally receive greater consideration."
+    },
+    {
+      "rule_id": 3,
+      "name": "Course Requirement",
+      "description": "Required courses generally receive greater priority, although electives may also be urgent."
+    },
+    {
+      "rule_id": 4,
+      "name": "Course Availability",
+      "description": "Courses offered less frequently generally receive greater priority, particularly when the next expected offering is after graduation."
+    },
+    {
+      "rule_id": 5,
+      "name": "Previous Attempts",
+      "description": "Students who have never attempted the requested course receive greater consideration on this factor."
+    },
+    {
+      "rule_id": 6,
+      "name": "Prerequisite Completion",
+      "description": "Confirmed unsatisfied prerequisites generally justify LOW priority. Unresolved or conflicting evidence may require MANUAL_REVIEW."
+    },
+    {
+      "rule_id": 7,
+      "name": "Academic Progression",
+      "description": "Courses affecting remaining required courses generally receive greater priority. Dependency counts alone must not determine priority."
+    },
+    {
+      "rule_id": 8,
+      "name": "Evidence Quality",
+      "description": "Missing or conflicting critical evidence that prevents a reliable assessment requires MANUAL_REVIEW."
+    }
+  ],
+  "priority_levels": {
+    "HIGH": "Delaying the course presents a significant risk to timely graduation.",
+    "MEDIUM": "Delaying the course could affect academic progression but is unlikely to delay graduation.",
+    "LOW": "The course can reasonably be delayed without significant academic impact, or verified academic circumstances justify lower priority.",
+    "MANUAL_REVIEW": "Insufficient or conflicting evidence prevents a reliable assessment."
+  }
+}

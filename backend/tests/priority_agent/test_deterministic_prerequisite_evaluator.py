@@ -1,212 +1,210 @@
-from app.agents.raise_capacity_priority.deterministic.prerequisite_evaluator import evaluate_prerequisite_completion
-from app.agents.raise_capacity_priority.retrieval.uos_prerequisite_parser import parse_prerequisite_text
+"""Factor 6 — prerequisite evaluation against knowledge/course_prerequisites.json."""
+
+import json
+
+import pytest
+
+from app.agents.raise_capacity_priority import KNOWLEDGE_DIR
+from app.agents.raise_capacity_priority.deterministic.prerequisite_evaluator import (
+    evaluate_course_leaf,
+    evaluate_prerequisite_completion,
+    not_evaluated_prerequisite_evidence,
+)
+from app.agents.raise_capacity_priority.deterministic.prerequisite_knowledge import (
+    PREREQUISITE_KNOWLEDGE,
+    load_prerequisite_knowledge,
+)
 from app.agents.raise_capacity_priority.schemas.academic_history import TakesRecord
-from app.agents.raise_capacity_priority.schemas.uos import ParsedPrerequisite, PrerequisiteEvidence
 
-SOURCE_URL = "https://www.sharjah.ac.ae/en/Academics/Degree/Undergraduate/Computer-Science"
-
-
-def _evidence(raw_text: str, source_section: str = "DEGREE_REQUIREMENTS") -> PrerequisiteEvidence:
-    parsed = parse_prerequisite_text(raw_text, source_section)
-    return PrerequisiteEvidence(
-        course_id=1501215,
-        course_found=True,
-        by_source=[parsed],
-        consistent=True,
-        conflict=False,
-        conflict_reason=None,
-        source_url=SOURCE_URL,
-    )
+REQUEST_TERM = 202601
+KB = PREREQUISITE_KNOWLEDGE
 
 
-def _take(course_id: int, grade, term: int = 202502) -> TakesRecord:
-    return TakesRecord(course_id=course_id, grade=grade, section_id="SEC-1", term=term)
+def take(course_id, grade, term=202502):
+    return TakesRecord(course_id=course_id, grade=grade, section_id="1", term=term)
 
 
-# 9. No prerequisite
-def test_no_prerequisite_is_satisfied():
-    result = evaluate_prerequisite_completion(1501215, _evidence("None"), [], 202601)
-    assert result.status == "SATISFIED"
+def evaluate(course_id, *records, hours=70, knowledge=KB, term=REQUEST_TERM):
+    return evaluate_prerequisite_completion(course_id, knowledge, list(records), term, hours)
 
 
-# 10. Single satisfied prerequisite
-def test_single_satisfied_prerequisite():
-    result = evaluate_prerequisite_completion(
-        1501215, _evidence("1501211"), [_take(1501211, "B")], 202601
-    )
-    assert result.status == "SATISFIED"
+# PRE — 1501215 Data Structures requires 1501211 (PRE)
+@pytest.mark.parametrize("grade, status", [
+    ("A", "SATISFIED"), ("D", "SATISFIED"),
+    ("F", "NOT_SATISFIED"), ("WF", "NOT_SATISFIED"), ("FA", "NOT_SATISFIED"),
+    ("W", "UNRESOLVED"), ("I", "UNRESOLVED"), (None, "UNRESOLVED"), ("XYZ", "UNRESOLVED"),
+])
+def test_earlier_term_grades_follow_the_approved_policy(grade, status):
+    assert evaluate("1501215", take("1501211", grade)).status == status
 
 
-# 11. Single failed prerequisite
-def test_single_failed_prerequisite():
-    result = evaluate_prerequisite_completion(
-        1501215, _evidence("1501211"), [_take(1501211, "F")], 202601
-    )
-    assert result.status == "NOT_SATISFIED"
+def test_no_record_is_not_satisfied():
+    ev = evaluate("1501215")
+    assert ev.status == "NOT_SATISFIED"
+    assert ev.knowledge_status == "REQUIREMENT_DEFINED"
+    assert ev.leaf_evaluations[0].reason == "No transcript record for 1501211."
 
 
-def test_single_prerequisite_never_attempted():
-    result = evaluate_prerequisite_completion(1501215, _evidence("1501211"), [], 202601)
-    assert result.status == "NOT_SATISFIED"
+def test_a_pass_after_an_earlier_fail_satisfies():
+    assert evaluate("1501215", take("1501211", "F", 202501), take("1501211", "B", 202502)).status == "SATISFIED"
 
 
-# 12. AND all satisfied
-def test_and_all_satisfied():
-    takes = [_take(1501215, "A"), _take(1501279, "C")]
-    result = evaluate_prerequisite_completion(
-        1501371, _evidence("1501215, 1501279"), takes, 202601
-    )
-    assert result.status == "SATISFIED"
+def test_current_enrolment_never_satisfies_pre():
+    assert evaluate("1501215", take("1501211", None, REQUEST_TERM)).status == "NOT_SATISFIED"
 
 
-# 13. AND one failed
-def test_and_one_failed():
-    takes = [_take(1501215, "A"), _take(1501279, "F")]
-    result = evaluate_prerequisite_completion(
-        1501371, _evidence("1501215, 1501279"), takes, 202601
-    )
-    assert result.status == "NOT_SATISFIED"
+def test_future_term_records_are_ignored():
+    ev = evaluate("1501215", take("1501211", "A", 202602))
+    assert ev.status == "NOT_SATISFIED"
+    assert ev.leaf_evaluations[0].matched_takes_records[0].term_relation == "AFTER_REQUEST_TERM"
 
 
-# 14. OR one satisfied
-def test_or_one_satisfied():
-    takes = [_take(1501211, "B")]
-    result = evaluate_prerequisite_completion(
-        1501445, _evidence("1501211 or 1501341"), takes, 202601
-    )
-    assert result.status == "SATISFIED"
+def test_unorderable_term_is_unresolved():
+    assert evaluate("1501215", take("1501211", "A", 202509)).status == "UNRESOLVED"
 
 
-# 15. OR all failed
-def test_or_all_failed():
-    takes = [_take(1501211, "F"), _take(1501341, "WF")]
-    result = evaluate_prerequisite_completion(
-        1501445, _evidence("1501211 or 1501341"), takes, 202601
-    )
-    assert result.status == "NOT_SATISFIED"
+# PRE_OR_CO
+def test_pre_or_co_satisfied_by_current_enrolment():
+    # 1420102 General Chemistry I Lab: Pre/Co 1420101
+    assert evaluate("1420102", take("1420101", None, REQUEST_TERM)).status == "SATISFIED"
 
 
-# 16. Nested AND/OR
-def test_nested_and_or_satisfied():
-    takes = [_take(1501341, "A"), _take(1501246, "B")]
-    result = evaluate_prerequisite_completion(
-        1501443, _evidence("1501341, (1501246 or 1501247)"), takes, 202601
-    )
-    assert result.status == "SATISFIED"
+def test_pre_or_co_satisfied_by_earlier_pass():
+    assert evaluate("1420102", take("1420101", "C")).status == "SATISFIED"
 
 
-def test_nested_and_or_not_satisfied_when_and_branch_fails():
-    takes = [_take(1501341, "F"), _take(1501246, "B")]
-    result = evaluate_prerequisite_completion(
-        1501443, _evidence("1501341, (1501246 or 1501247)"), takes, 202601
-    )
-    assert result.status == "NOT_SATISFIED"
+def test_pre_or_co_failing_grade_in_request_term_is_not_enrolment():
+    assert evaluate("1420102", take("1420101", "WF", REQUEST_TERM)).status == "NOT_SATISFIED"
 
 
-# 17. Standing requirement unresolved
-def test_standing_requirement_is_unresolved():
-    result = evaluate_prerequisite_completion(
-        1501397, _evidence("Junior/Senior standing"), [], 202601
-    )
-    assert result.status == "UNRESOLVED"
-    assert result.leaf_evaluations[0].kind == "STANDING"
+def test_pre_or_co_withdrawn_grade_in_request_term_is_unresolved():
+    assert evaluate("1420102", take("1420101", "W", REQUEST_TERM)).status == "UNRESOLVED"
 
 
-def test_course_and_standing_is_unresolved_even_if_course_satisfied():
-    takes = [_take(1501215, "A")]
-    result = evaluate_prerequisite_completion(
-        1501394, _evidence("1501215 and Junior Standing"), takes, 202601
-    )
-    assert result.status == "UNRESOLVED"
+def test_pre_or_co_alternative_id_1430115_satisfies_physics_lab():
+    # 1430116 Physics I Lab: (1430110 OR 1430115), both Pre/Co
+    assert evaluate("1430116", take("1430115", "B")).status == "SATISFIED"
+    assert evaluate("1430116", take("1430110", None, REQUEST_TERM)).status == "SATISFIED"
+    assert evaluate("1430116").status == "NOT_SATISFIED"
 
 
-# 18. PRE_OR_CO handling
-def test_pre_or_co_satisfied_by_completion():
-    takes = [_take(1430110, "A", term=202502)]
-    result = evaluate_prerequisite_completion(
-        1430116, _evidence("Pre/Co: 1430110"), takes, 202601
-    )
-    assert result.status == "SATISFIED"
+# CO-only (supported for future knowledge; not used by the current file)
+def test_co_only_requires_request_term_enrolment():
+    assert evaluate_course_leaf("1420101", "CO", [take("1420101", None, REQUEST_TERM)], REQUEST_TERM).status == "SATISFIED"
+    assert evaluate_course_leaf("1420101", "CO", [take("1420101", "A")], REQUEST_TERM).status == "NOT_SATISFIED"
+    assert evaluate_course_leaf("1420101", "CO", [], REQUEST_TERM).status == "NOT_SATISFIED"
 
 
-def test_pre_or_co_satisfied_by_concurrent_registration():
-    takes = [_take(1430110, None, term=202601)]  # in-progress this same term
-    result = evaluate_prerequisite_completion(
-        1430116, _evidence("Pre/Co: 1430110"), takes, 202601
-    )
-    assert result.status == "SATISFIED"
-    assert "Concurrent" in result.leaf_evaluations[0].reason
+# AND / OR / nested
+def test_and_requires_every_branch():
+    # 1501371: 1501215 AND 1501279
+    assert evaluate("1501371", take("1501215", "A"), take("1501279", "B")).status == "SATISFIED"
+    assert evaluate("1501371", take("1501215", "A")).status == "NOT_SATISFIED"
+    assert evaluate("1501371", take("1501215", "A"), take("1501279", None)).status == "UNRESOLVED"
+    assert evaluate("1501371", take("1501215", "F"), take("1501279", None)).status == "NOT_SATISFIED"
 
 
-def test_pre_or_co_not_satisfied_when_no_completion_or_concurrent_record():
-    takes = [_take(1430110, "F", term=202410)]
-    result = evaluate_prerequisite_completion(
-        1430116, _evidence("Pre/Co: 1430110"), takes, 202601
-    )
-    assert result.status == "NOT_SATISFIED"
+def test_or_needs_one_branch():
+    # 1501445: 1501211 OR 1501341
+    assert evaluate("1501445", take("1501341", "C")).status == "SATISFIED"
+    assert evaluate("1501445").status == "NOT_SATISFIED"
+    assert evaluate("1501445", take("1501211", "I")).status == "UNRESOLVED"
 
 
-def test_ordinary_prerequisite_not_satisfied_by_same_term_record_alone():
-    # Unlike PRE_OR_CO, an ordinary PREREQUISITE is not satisfied merely
-    # by an in-progress same-term record with no passing grade.
-    takes = [_take(1501211, None, term=202601)]
-    result = evaluate_prerequisite_completion(1501215, _evidence("1501211"), takes, 202601)
-    assert result.status == "UNRESOLVED"
+def test_nested_and_or():
+    # 1501443: 1501341 AND (1501246 OR 1501247)
+    assert evaluate("1501443", take("1501341", "A"), take("1501247", "B")).status == "SATISFIED"
+    assert evaluate("1501443", take("1501341", "A")).status == "NOT_SATISFIED"
+    assert evaluate("1501443", take("1501246", "A")).status == "NOT_SATISFIED"
 
 
-# 19. UoS prerequisite conflict
-def test_uos_conflict_returns_conflict_status_without_choosing_a_version():
-    evidence = PrerequisiteEvidence(
-        course_id=1501252,
-        course_found=True,
-        by_source=[
-            parse_prerequisite_text("1502201", "DEGREE_REQUIREMENTS"),
-            parse_prerequisite_text("1403201", "STUDY_PLAN"),
-        ],
-        consistent=False,
-        conflict=True,
-        conflict_reason="Prerequisite text differs materially across sections.",
-        source_url=SOURCE_URL,
-    )
-    result = evaluate_prerequisite_completion(1501252, evidence, [], 202601)
-    assert result.status == "CONFLICT"
-    assert result.uos_conflict is True
+def test_leading_zero_alternative_course_id():
+    # 1501252: 1502201 OR 0403201
+    ev = evaluate("1501252", take("0403201", "B"))
+    assert ev.status == "SATISFIED"
+    assert {leaf.course_id for leaf in ev.leaf_evaluations} == {"1502201", "0403201"}
 
 
-def test_course_not_found_on_uos_page_is_unresolved():
-    evidence = PrerequisiteEvidence(
-        course_id=9999999,
-        course_found=False,
-        by_source=[],
-        consistent=True,
-        conflict=False,
-        conflict_reason=None,
-        source_url=SOURCE_URL,
-    )
-    result = evaluate_prerequisite_completion(9999999, evidence, [], 202601)
-    assert result.status == "UNRESOLVED"
+# Standing (thresholds from the knowledge file)
+@pytest.mark.parametrize("hours, status", [(64, "NOT_SATISFIED"), (65, "SATISFIED"), (98, "SATISFIED"), (99, "SATISFIED")])
+def test_junior_standing_boundaries(hours, status):
+    # 1501344 2D Character Design: Junior Standing
+    assert evaluate("1501344", hours=hours).status == status
 
 
-def test_unparseable_prerequisite_text_is_unresolved():
-    # Constructed directly (rather than via parse_prerequisite_text,
-    # which is intentionally permissive and rarely fails) to exercise
-    # the "nothing parseable" branch: genuinely ambiguous UoS text
-    # should stay unresolved, never guessed as satisfied or not.
-    unparseable = ParsedPrerequisite(
-        source_section="DEGREE_REQUIREMENTS",
-        raw_text="some format this parser does not recognize",
-        relation="PREREQUISITE",
-        expression=None,
-        parseable=False,
-    )
-    evidence = PrerequisiteEvidence(
-        course_id=1501215,
-        course_found=True,
-        by_source=[unparseable],
-        consistent=True,
-        conflict=False,
-        conflict_reason=None,
-        source_url=SOURCE_URL,
-    )
-    result = evaluate_prerequisite_completion(1501215, evidence, [], 202601)
-    assert result.status == "UNRESOLVED"
+@pytest.mark.parametrize("hours, status", [(64, "NOT_SATISFIED"), (65, "NOT_SATISFIED"), (98, "NOT_SATISFIED"), (99, "SATISFIED")])
+def test_senior_standing_boundaries(hours, status):
+    # 1501441 Multimedia Technology: 1501215 AND Senior Standing
+    assert evaluate("1501441", take("1501215", "A"), hours=hours).status == status
+
+
+@pytest.mark.parametrize("hours, status", [(64, "NOT_SATISFIED"), (65, "SATISFIED"), (99, "SATISFIED")])
+def test_junior_or_senior_standing(hours, status):
+    # 1501397 CO-OP: Junior OR Senior Standing
+    assert evaluate("1501397", hours=hours).status == status
+
+
+def test_course_and_standing():
+    # 1501394 Junior Project: 1501215 AND Junior Standing
+    ev = evaluate("1501394", take("1501215", "B"), hours=65)
+    assert ev.status == "SATISFIED"
+    standing = next(leaf for leaf in ev.leaf_evaluations if leaf.kind == "STANDING")
+    assert standing.required_earned_credits == 65 and standing.completed_hours == 65
+
+
+@pytest.mark.parametrize("hours", [None, -1])
+def test_missing_or_invalid_completed_hours_is_unresolved(hours):
+    assert evaluate("1501344", hours=hours).status == "UNRESOLVED"
+
+
+def test_standing_thresholds_come_from_the_knowledge_file(tmp_path):
+    data = json.loads((KNOWLEDGE_DIR / "course_prerequisites.json").read_text(encoding="utf-8"))
+    data["standing_definitions"]["Junior Standing"]["prerequisite_min_earned_credits"] = 70
+    path = tmp_path / "kb.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    custom = load_prerequisite_knowledge(path)
+    assert evaluate("1501344", hours=65, knowledge=custom).status == "NOT_SATISFIED"
+    assert evaluate("1501344", hours=70, knowledge=custom).status == "SATISFIED"
+
+
+# Knowledge status
+def test_explicitly_no_prerequisites():
+    ev = evaluate("1501116")
+    assert ev.status == "SATISFIED"
+    assert ev.knowledge_status == "NO_PREREQUISITES"
+    assert ev.requirement_expression is None
+
+
+def test_leading_zero_course_without_prerequisites():
+    assert evaluate("0202213").knowledge_status == "NO_PREREQUISITES"
+
+
+def test_missing_prerequisite_knowledge_is_unresolved_not_none():
+    ev = evaluate("9999999")
+    assert ev.status == "UNRESOLVED"
+    assert ev.knowledge_status == "MISSING_FROM_KNOWLEDGE_BASE"
+
+
+@pytest.mark.parametrize("knowledge_status, status, expected", [
+    ("CONFLICTING", "CONFLICT", "CONFLICTING"),
+    ("UNVERIFIED", "UNRESOLVED", "NOT_VERIFIED"),
+    ("NOT_COLLECTED", "UNRESOLVED", "NOT_VERIFIED"),
+])
+def test_non_verified_entries(tmp_path, knowledge_status, status, expected):
+    data = json.loads((KNOWLEDGE_DIR / "course_prerequisites.json").read_text(encoding="utf-8"))
+    data["courses"]["1501215"]["prerequisite_status"] = knowledge_status
+    path = tmp_path / "kb.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    ev = evaluate("1501215", take("1501211", "A"), knowledge=load_prerequisite_knowledge(path))
+    assert (ev.status, ev.knowledge_status) == (status, expected)
+
+
+def test_not_evaluated_evidence():
+    ev = not_evaluated_prerequisite_evidence("1502232", "Outside scope.")
+    assert (ev.status, ev.knowledge_status) == ("UNRESOLVED", "NOT_EVALUATED")
+
+
+def test_evidence_records_the_knowledge_expression_and_source():
+    ev = evaluate("1501443", take("1501341", "A"))
+    assert ev.requirement_expression.type == "ALL_OF"
+    assert ev.source == "knowledge/course_prerequisites.json"

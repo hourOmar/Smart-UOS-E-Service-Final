@@ -1,37 +1,47 @@
 """
-Pydantic models for the Phase 5 final prioritization evidence package —
-the single structured object Phase 6 will hand to Gemini alongside the
-(separately-loaded) prioritization policy. See app/pipeline/
-build_prioritization_evidence.py for why the policy is NOT embedded
-here.
+Pydantic models for the final prioritization evidence package — the single
+structured object handed to Gemini alongside the (separately loaded)
+prioritization policy. No field here is a priority judgment.
 
-Most sections reuse Phase 3/4 evidence models directly rather than
-redefining their fields, so this file only defines what is genuinely
-new: request context, graduation comparison, and the evidence-quality
-summary. No field here is a priority judgment.
+Sections (one per factor, plus scope and evidence quality):
+  request_context            identification + the student's free-text reason
+                             (unverified, student-provided)
+  program_scope              whether the student's program is supported
+  graduation                 factor 1
+  degree_progress            factor 2
+  requested_course_requirement  factor 3
+  course_availability        factor 4
+  previous_attempts          factor 5
+  prerequisite_completion    factor 6
+  progression                factor 7
+  evidence_quality           missing / invalid / incomplete / conflicting
+                             evidence found by Python (a safeguard, not a
+                             weighted factor)
 """
 
 from typing import Optional
 
 from pydantic import BaseModel
 
+from ..deterministic.program_scope import ProgramScopeEvidence
 from ..schemas.deterministic import (
+    CourseRequirementEvidence,
     PreviousAttemptSummaryEvidence,
     PrerequisiteCompletionEvidence,
     ProgressionEvidence,
     RemainingCreditsEvidence,
     RequestedCourseOfferingEvidence,
 )
-from ..schemas.uos import CourseCategoryEvidence
 
 
 class RequestContext(BaseModel):
     request_id: str
     student_id: str
     request_term: int
-    course_id: int
+    course_id: str
     course_name: str
     section_id: str
+    # Student-provided and unverified; never a prioritization factor.
     reason: Optional[str]
 
 
@@ -48,6 +58,7 @@ class GraduationEvidence(BaseModel):
 
 
 class EvidenceQualitySummary(BaseModel):
+    program_in_scope: bool
     has_missing_evidence: bool
     has_conflicting_evidence: bool
     issues: list[str]
@@ -55,9 +66,10 @@ class EvidenceQualitySummary(BaseModel):
 
 class PrioritizationEvidencePackage(BaseModel):
     request_context: RequestContext
+    program_scope: ProgramScopeEvidence
     graduation: GraduationEvidence
     degree_progress: RemainingCreditsEvidence
-    requested_course_requirement: CourseCategoryEvidence
+    requested_course_requirement: CourseRequirementEvidence
     course_availability: RequestedCourseOfferingEvidence
     previous_attempts: PreviousAttemptSummaryEvidence
     prerequisite_completion: PrerequisiteCompletionEvidence

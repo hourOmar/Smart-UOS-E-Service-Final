@@ -1,103 +1,171 @@
-from app.agents.raise_capacity_priority.deterministic.course_offerings import build_requested_course_offering_evidence
+"""Factor 4 — course availability from knowledge/course_offerings.json (YES/NO/UNKNOWN)."""
 
-FALL_ONLY_COURSE = 1501322  # Prof. Soc. & Ethical Issues in CS: fall=true, spring=false, summer=false
-SPRING_ONLY_COURSE = 1501246  # Obj. Oriented Design with Java: fall=false, spring=true, summer=false
-ALL_SEMESTERS_COURSE = 1501215  # Data Structures: fall/spring/summer all true
-MISSING_COURSE = 9999999
+import json
 
+import pytest
 
-# 27. Course offered Fall only
-def test_course_offered_fall_only():
-    evidence = build_requested_course_offering_evidence(FALL_ONLY_COURSE, request_term=None)
-    assert evidence.found_in_kb is True
-    assert evidence.fall is True
-    assert evidence.spring is False
-    assert evidence.summer is False
+from app.agents.raise_capacity_priority import KNOWLEDGE_DIR
+from app.agents.raise_capacity_priority.deterministic import course_offerings as offerings
+from app.agents.raise_capacity_priority.deterministic.course_offerings import (
+    OFFERINGS_PROGRAM_ID,
+    build_requested_course_offering_evidence,
+    get_course_offering,
+    load_offerings,
+    not_evaluated_offering_evidence,
+)
 
+FALL = 202601
+SPRING = 202602
+SUMMER = 202603
 
-# 28. Fall + Spring (use the all-semesters course, just check both true)
-def test_course_offered_fall_and_spring():
-    evidence = build_requested_course_offering_evidence(ALL_SEMESTERS_COURSE, request_term=None)
-    assert evidence.fall is True
-    assert evidence.spring is True
-
-
-# 29. Summer available
-def test_summer_available_true():
-    evidence = build_requested_course_offering_evidence(ALL_SEMESTERS_COURSE, request_term=None)
-    assert evidence.summer_available is True
+ALL_SEMESTERS = "1501215"  # Data Structures: YES/YES/YES
+FALL_ONLY = "1501322"  # YES/NO/NO (offered once per year)
+SPRING_ONLY = "1501246"  # NO/YES/NO
+FALL_SPRING = "1501279"  # YES/YES/NO
+ALL_UNKNOWN = "1501355"  # UNKNOWN/UNKNOWN/UNKNOWN
 
 
-def test_summer_available_false():
-    evidence = build_requested_course_offering_evidence(FALL_ONLY_COURSE, request_term=None)
-    assert evidence.summer_available is False
+def _ev(course_id, term=FALL, graduation=None):
+    return build_requested_course_offering_evidence(course_id, term, graduation)
 
 
-# 30. Course missing from KB
-def test_course_missing_from_kb_is_explicit_not_false():
-    evidence = build_requested_course_offering_evidence(MISSING_COURSE, request_term=202601)
-    assert evidence.found_in_kb is False
-    assert evidence.fall is None
-    assert evidence.spring is None
-    assert evidence.summer is None
-    assert evidence.summer_available is None
-    assert evidence.offered_semester_count is None
-    assert evidence.offered_semesters == []
+def test_loader_reads_all_58_courses_with_text_ids():
+    program_id, index = load_offerings()
+    assert program_id == OFFERINGS_PROGRAM_ID == "1501"
+    assert len(index) == 58
+    assert all(isinstance(cid, str) and len(cid) == 7 for cid in index)
+    for cid in ("1501100", "0104100", "1502201", "1502202"):
+        assert cid in index
 
 
-# 31. Offered-semester count
-def test_offered_semester_count():
-    evidence = build_requested_course_offering_evidence(ALL_SEMESTERS_COURSE, request_term=None)
-    assert evidence.offered_semester_count == 3
-    assert set(evidence.offered_semesters) == {"FALL", "SPRING", "SUMMER"}
-
-    evidence_single = build_requested_course_offering_evidence(FALL_ONLY_COURSE, request_term=None)
-    assert evidence_single.offered_semester_count == 1
+def test_leading_zero_course_ids_are_preserved():
+    assert get_course_offering("0201102") == {"fall": "YES", "spring": "YES", "summer": "YES"}
+    assert get_course_offering("201102") is None
 
 
-# 32. Fall request + Spring course available
-def test_next_semester_fall_request_spring_available():
-    evidence = build_requested_course_offering_evidence(SPRING_ONLY_COURSE, request_term=202601)
-    assert evidence.current_semester == "FALL"
-    assert evidence.next_semester == "SPRING"
-    assert evidence.offered_next_semester is True
+def test_six_electives_are_unknown_not_no():
+    for cid in ("1501355", "1501433", "1501440", "1501441", "1501451", "1501474"):
+        assert get_course_offering(cid) == {"fall": "UNKNOWN", "spring": "UNKNOWN", "summer": "UNKNOWN"}
 
 
-# 33. Fall request + Spring unavailable
-def test_next_semester_fall_request_spring_unavailable():
-    evidence = build_requested_course_offering_evidence(FALL_ONLY_COURSE, request_term=202601)
-    assert evidence.next_semester == "SPRING"
-    assert evidence.offered_next_semester is False
+def test_usual_semesters_are_reported():
+    ev = _ev(FALL_SPRING)
+    assert (ev.fall, ev.spring, ev.summer) == ("YES", "YES", "NO")
+    assert ev.usually_offered_semesters == ["FALL", "SPRING"]
+    assert ev.not_offered_semesters == ["SUMMER"]
+    assert ev.unknown_offering_semesters == []
 
 
-# 34. Spring request + Summer available
-def test_next_semester_spring_request_summer_available():
-    evidence = build_requested_course_offering_evidence(ALL_SEMESTERS_COURSE, request_term=202602)
-    assert evidence.current_semester == "SPRING"
-    assert evidence.next_semester == "SUMMER"
-    assert evidence.offered_next_semester is True
+def test_next_known_offering_next_semester():
+    ev = _ev(ALL_SEMESTERS, FALL)
+    assert ev.next_term == SPRING and ev.next_term_offering == "YES"
+    assert ev.next_offering_status == "KNOWN"
+    assert ev.next_known_offering_term == SPRING
+    assert (ev.waiting_terms_including_summer, ev.waiting_terms_excluding_summer) == (1, 1)
+    assert ev.availability_uncertain is False
 
 
-# 35. Summer request + Fall available
-def test_next_semester_summer_request_fall_available():
-    evidence = build_requested_course_offering_evidence(ALL_SEMESTERS_COURSE, request_term=202603)
-    assert evidence.current_semester == "SUMMER"
-    assert evidence.next_semester == "FALL"
-    assert evidence.offered_next_semester is True
+def test_once_per_year_course_waits_a_full_cycle():
+    ev = _ev(FALL_ONLY, FALL)
+    assert ev.next_term_offering == "NO"
+    assert ev.next_known_offering_term == 202701
+    assert ev.next_known_offering_semester == "FALL"
+    assert (ev.waiting_terms_including_summer, ev.waiting_terms_excluding_summer) == (3, 2)
 
 
-# 36. Unsupported term
-def test_next_semester_unsupported_term_suffix():
-    evidence = build_requested_course_offering_evidence(ALL_SEMESTERS_COURSE, request_term=202699)
-    assert evidence.term_suffix_supported is False
-    assert evidence.current_semester is None
-    assert evidence.next_semester is None
-    assert evidence.offered_next_semester is None
+def test_spring_request_next_term_is_summer():
+    ev = _ev(FALL_SPRING, SPRING)
+    assert ev.next_term == SUMMER and ev.next_term_offering == "NO"
+    assert ev.next_known_offering_term == 202701
+    assert (ev.waiting_terms_including_summer, ev.waiting_terms_excluding_summer) == (2, 1)
 
 
-# 37. Course missing from KB (next-semester specific)
-def test_next_semester_course_missing_from_kb_is_unresolved():
-    evidence = build_requested_course_offering_evidence(MISSING_COURSE, request_term=202601)
-    assert evidence.term_suffix_supported is True
-    assert evidence.next_semester == "SPRING"
-    assert evidence.offered_next_semester is None
+def test_summer_availability_reported():
+    ev = _ev(ALL_SEMESTERS, SPRING)
+    assert ev.summer == "YES"
+    assert ev.next_known_offering_term == SUMMER
+    assert (ev.waiting_terms_including_summer, ev.waiting_terms_excluding_summer) == (1, 0)
+
+
+def test_summer_request_next_term_is_fall():
+    ev = _ev(SPRING_ONLY, SUMMER)
+    assert ev.next_term == 202701 and ev.next_term_offering == "NO"
+    assert ev.next_known_offering_term == 202702
+
+
+@pytest.mark.parametrize("graduation, expected", [
+    (202602, "AFTER_EXPECTED_GRADUATION"),
+    (202701, "SAME_AS_EXPECTED_GRADUATION"),
+    (202702, "BEFORE_EXPECTED_GRADUATION"),
+    (None, "UNKNOWN"),
+])
+def test_next_known_offering_compared_with_graduation(graduation, expected):
+    assert _ev(FALL_ONLY, FALL, graduation).next_known_offering_vs_expected_graduation == expected
+
+
+def test_all_unknown_cannot_be_determined_and_is_never_no():
+    ev = _ev(ALL_UNKNOWN)
+    assert ev.found_in_kb is True
+    assert (ev.fall, ev.spring, ev.summer) == ("UNKNOWN", "UNKNOWN", "UNKNOWN")
+    assert ev.not_offered_semesters == []
+    assert ev.next_offering_status == "UNDETERMINED"
+    assert ev.next_known_offering_term is None
+    assert ev.waiting_terms_including_summer is None
+    assert ev.earlier_unconfirmed_offering_terms == [202602, 202603, 202701]
+    assert ev.availability_uncertain is True
+    assert any("cannot be determined" in n for n in ev.notes)
+
+
+def test_partially_unknown_reports_earlier_unconfirmed_offerings(monkeypatch):
+    monkeypatch.setitem(offerings._OFFERINGS_INDEX, "1234567", {"fall": "YES", "spring": "UNKNOWN", "summer": "NO"})
+    ev = _ev("1234567", FALL)
+    assert ev.next_offering_status == "KNOWN"
+    assert ev.next_known_offering_term == 202701
+    assert ev.earlier_unconfirmed_offering_terms == [202602]
+    assert ev.availability_uncertain is True
+    assert any("not confirmed" in n for n in ev.notes)
+
+
+def test_no_usual_offering_listed_never_claims_never_offered(monkeypatch):
+    monkeypatch.setitem(offerings._OFFERINGS_INDEX, "1234567", {"fall": "NO", "spring": "NO", "summer": "NO"})
+    ev = _ev("1234567")
+    assert ev.next_offering_status == "NO_USUAL_OFFERING_LISTED"
+    assert any("does not establish" in n for n in ev.notes)
+
+
+def test_missing_course_is_not_available_not_defaulted():
+    ev = _ev("9999999")
+    assert ev.found_in_kb is False
+    assert ev.fall is ev.spring is ev.summer is None
+    assert ev.next_offering_status == "NOT_AVAILABLE"
+    assert ev.availability_uncertain is True
+
+
+def test_unsupported_request_term_suffix():
+    ev = _ev(ALL_SEMESTERS, 202604)
+    assert ev.term_suffix_supported is False
+    assert ev.next_offering_status == "NOT_AVAILABLE"
+    assert ev.fall == "YES"
+
+
+def test_not_evaluated_evidence():
+    ev = not_evaluated_offering_evidence("1502232", "Program outside scope.")
+    assert ev.found_in_kb is False and ev.notes == ["Program outside scope."]
+
+
+def test_usual_offerings_disclaimer_present():
+    assert "Usual offerings are not guaranteed future offerings." in _ev(ALL_SEMESTERS).notes
+
+
+@pytest.mark.parametrize("mutate, message", [
+    (lambda d: d["courses"][0]["offerings"].update(fall="MAYBE"), "YES, NO or UNKNOWN"),
+    (lambda d: d["courses"].append(dict(d["courses"][0])), "duplicate"),
+    (lambda d: d["courses"][0].update(course_id=201102), "invalid course_id"),
+])
+def test_malformed_file_fails_loudly(tmp_path, mutate, message):
+    data = json.loads((KNOWLEDGE_DIR / "course_offerings.json").read_text(encoding="utf-8"))
+    mutate(data)
+    path = tmp_path / "offerings.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match=message):
+        load_offerings(path)

@@ -77,3 +77,33 @@ def test_invalid_request_term_suffix_returns_none():
 def test_invalid_expected_graduation_term_suffix_returns_none():
     result = calculate_terms_until_graduation(202601, 202699)
     assert result is None
+
+
+# Term helpers used by the availability calculation (same Fall -> Spring -> Summer convention).
+from app.agents.raise_capacity_priority.deterministic.term import (  # noqa: E402
+    compare_terms,
+    following_terms,
+    term_from_index,
+    term_index,
+)
+
+
+def test_following_terms_cross_the_year_boundary():
+    assert following_terms(202602, 3) == [202603, 202701, 202702]
+    assert following_terms(202603, 1) == [202701]
+
+
+def test_following_terms_unsupported_suffix_is_empty():
+    assert following_terms(202604, 3) == []
+
+
+def test_compare_terms():
+    assert compare_terms(202601, 202602) == -1
+    assert compare_terms(202603, 202603) == 0
+    assert compare_terms(202701, 202603) == 1
+    assert compare_terms(202600, 202601) is None
+
+
+def test_term_index_round_trip():
+    for term in (202601, 202602, 202603, 199903):
+        assert term_from_index(term_index(term)) == term

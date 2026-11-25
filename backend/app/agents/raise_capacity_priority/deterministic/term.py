@@ -53,6 +53,35 @@ def _term_sequence_index(term: int) -> Optional[int]:
     return year * 3 + _SEMESTER_OFFSET[semester]
 
 
+def term_index(term: int) -> Optional[int]:
+    """Public form of _term_sequence_index: None for an unsupported suffix."""
+    return _term_sequence_index(term)
+
+
+def term_from_index(index: int) -> int:
+    """The term code for a sequence index (the inverse of term_index)."""
+    year, offset = divmod(index, 3)
+    return year * 100 + offset + 1
+
+
+def compare_terms(term: int, reference: int) -> Optional[int]:
+    """-1, 0 or 1 as term is before, equal to or after reference; None when
+    either term has an unsupported semester suffix (never guessed)."""
+    a, b = _term_sequence_index(term), _term_sequence_index(reference)
+    if a is None or b is None:
+        return None
+    return (a > b) - (a < b)
+
+
+def following_terms(term: int, count: int) -> list[int]:
+    """The next `count` term codes after term (Fall -> Spring -> Summer ->
+    Fall); empty when term's suffix is unsupported."""
+    index = _term_sequence_index(term)
+    if index is None:
+        return []
+    return [term_from_index(index + step) for step in range(1, count + 1)]
+
+
 def calculate_terms_until_graduation(
     request_term: int, expected_graduation_term: int
 ) -> Optional[tuple[int, int]]:

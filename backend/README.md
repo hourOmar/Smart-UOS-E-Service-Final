@@ -52,9 +52,13 @@ opening of a request that was never evaluated, then on "Re-run". Stored in
 
 ### Raise Capacity Prioritization Agent (`raise_capacity_priority/`)
 
-Ported from a standalone agent with its rules, system instruction and knowledge files unchanged.
-Computes evidence in Python; Gemini decides `HIGH` / `MEDIUM` / `LOW` / `MANUAL_REVIEW`. The
-student's ID is not sent to Gemini. Runs automatically for visible In Progress Raise Capacity
+Assesses the academic urgency of a request (it never decides eligibility). Python prepares the
+evidence from the database (student, transcript, current study plan and its total credit hours)
+and the agent's own validated knowledge files in `knowledge/` (prerequisites, usual course
+offerings, grade policy, prioritization policy) — no web page is read at run time. Gemini weighs
+the seven factors under the eight policy rules and decides `HIGH` / `MEDIUM` / `LOW` /
+`MANUAL_REVIEW`; Python validates only the reply's structure and stores a valid reply unchanged.
+The student's ID is not sent to Gemini; the student's reason is sent as unverified context. Runs automatically for visible In Progress Raise Capacity
 requests without a priority (at most two at a time per backend process) and on manual retry.
 Results are saved only through `agents.save_raise_capacity_priority` into
 `Raise_Capacity."Priority_Level"` and `"Priority_Result"`, and only when both are empty; run
@@ -213,8 +217,10 @@ All tests run offline with fakes for the database, Storage and Gemini.
 - Incomplete Exam is limited to final exams only by the student form; the agents and the
   database functions do not enforce it.
 - The AI reads proof documents but does not verify their authenticity.
-- Raise Capacity prerequisites are verified only from the UoS Computer Science degree page;
+- Raise Capacity Eligibility verifies prerequisites only from the UoS Computer Science degree page;
   other courses are reported as unverified (`MANUAL_REVIEW`).
+- The Raise Capacity Prioritization agent's knowledge files cover the Computer Science program
+  (1501) only; for other programs it is instructed to recommend `MANUAL_REVIEW`.
 - Another team backend that connects as `postgres` can still overwrite the Raise Capacity
   priority fields directly; this backend cannot prevent that.
 - Runs stored before Incomplete Exam agent 1.3.0 keep the rejection keywords they were saved with.

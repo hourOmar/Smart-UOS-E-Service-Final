@@ -1,0 +1,956 @@
+{
+  "schema_version": "1.0",
+  "status": "owner_confirmed_pending_database_validation",
+  "program_id": "1501",
+  "source": {
+    "url": "https://www.sharjah.ac.ae/Academics/Degree/Undergraduate/Computer-Science",
+    "retrieved_on": "2026-11-24"
+  },
+  "notes": [
+    "University elective slots are not named on the page and are not included.",
+    "Course description cross-check is incomplete beyond visible source excerpt.",
+    "University compulsory courses reviewed and confirmed by project owner; selected database IDs 1501100 and 0104100.",
+    "College compulsory courses confirmed by project owner; Physics I Lab Pre/Co 1430110 or 1430115; Chemistry I Lab Pre/Co 1420101.",
+    "Support compulsory courses confirmed by project owner; Critical Reading and Writing has no prerequisite.",
+    "Major compulsory part 1 confirmed by project owner; 1501252 requires 1502201 OR 0403201; 1502202 is Pre/Co 1502201.",
+    "Major compulsory part 2 confirmed by project owner; Networking Fundamentals requires 1501215 OR 1501214.",
+    "Major compulsory part 3 confirmed by project owner. Junior Standing prerequisite means at least 65 earned credits; Senior Standing classification begins at 99 earned credits. CO-OP requires Junior OR Senior Standing.",
+    "Major electives part 1 confirmed by project owner; Numerical Methods requires Programming I AND Linear Algebra.",
+    "All 58 entries confirmed by project owner; not independently certified by university.",
+    "Live database coverage and alternative prerequisite IDs still require validation."
+  ],
+  "courses": {
+    "0201102": {
+      "course_name": "Arabic Language",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed no prerequisites."
+    },
+    "0202112": {
+      "course_name": "English for Academic Purposes",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed no prerequisites."
+    },
+    "1501100": {
+      "course_name": "Introduction to IT",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed no prerequisites. Project owner selected database course ID 1501100 instead of 1501110."
+    },
+    "0104100": {
+      "course_name": "Islamic Culture",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed no prerequisites. Project owner selected database course ID 0104100 instead of 0101100."
+    },
+    "0302200": {
+      "course_name": "Fundamentals of Innovation and Entrepreneurship",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed no prerequisites."
+    },
+    "0204102": {
+      "course_name": "UAE Society",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed no prerequisites."
+    },
+    "1430110": {
+      "course_name": "Physics I for Sciences",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during college compulsory review."
+    },
+    "1430116": {
+      "course_name": "Physics I Lab",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ANY_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1430110",
+            "concurrent_allowed": true
+          },
+          {
+            "type": "COURSE",
+            "course_id": "1430115",
+            "concurrent_allowed": true
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "Pre/Co 1430110",
+        "1430110 or 1430115 (Pre/Co)"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during college compulsory review."
+    },
+    "1420101": {
+      "course_name": "General Chemistry I",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during college compulsory review."
+    },
+    "1420102": {
+      "course_name": "General Chemistry I Lab",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1420101",
+        "concurrent_allowed": true
+      },
+      "source_requirement_variants": [
+        "Pre/Co 1420101",
+        "1420101"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during college compulsory review."
+    },
+    "0202213": {
+      "course_name": "Critical Reading and Writing",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "0202112",
+        "None"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed no prerequisites."
+    },
+    "1440131": {
+      "course_name": "Calculus I",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during college compulsory review."
+    },
+    "1440132": {
+      "course_name": "Calculus II",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1440131",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1440131"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed Calculus I (1440131) prerequisite."
+    },
+    "1440211": {
+      "course_name": "Linear Algebra",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1440131",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1440131"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed Calculus I (1440131) prerequisite."
+    },
+    "1440281": {
+      "course_name": "Introduction to Probability and Statistics",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1440131",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1440131"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed Calculus I (1440131) prerequisite."
+    },
+    "1501116": {
+      "course_name": "Programming I",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory review, part 1."
+    },
+    "1502201": {
+      "course_name": "Digital Logic Design",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501116",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501116"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory review, part 1."
+    },
+    "1502202": {
+      "course_name": "Digital Logic Design Lab",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1502201",
+        "concurrent_allowed": true
+      },
+      "source_requirement_variants": [
+        "1502201"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory review, part 1."
+    },
+    "1501211": {
+      "course_name": "Programming II",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501116",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501116"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory review, part 1."
+    },
+    "1501215": {
+      "course_name": "Data Structures",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501211",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501211"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory review, part 1."
+    },
+    "1501246": {
+      "course_name": "Object Oriented Design with Java",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501211",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501211"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory review, part 1."
+    },
+    "1501252": {
+      "course_name": "Computer Organization and Assembly Language",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ANY_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1502201",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "COURSE",
+            "course_id": "0403201",
+            "concurrent_allowed": false
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1502201",
+        "1403201",
+        "0403201"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory review, part 1."
+    },
+    "1501263": {
+      "course_name": "Introduction to Database Management Systems",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory review, part 1."
+    },
+    "1501279": {
+      "course_name": "Discrete Structures",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1440131",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1440131"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory part 2 review."
+    },
+    "1501319": {
+      "course_name": "Programming Languages and Paradigms",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory part 2 review."
+    },
+    "1501322": {
+      "course_name": "Professional, Social and Ethical Issues in CS",
+      "prerequisite_status": "VERIFIED",
+      "requirement": null,
+      "source_requirement_variants": [
+        "None / dash"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory part 2 review."
+    },
+    "1501352": {
+      "course_name": "Operating Systems",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory part 2 review."
+    },
+    "1501330": {
+      "course_name": "Introduction to Artificial Intelligence",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory part 2 review."
+    },
+    "1501366": {
+      "course_name": "Software Engineering",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory part 2 review."
+    },
+    "1501250": {
+      "course_name": "Networking Fundamentals",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ANY_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501215",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "COURSE",
+            "course_id": "1501214",
+            "concurrent_allowed": false
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1501215",
+        "1501214"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory part 2 review."
+    },
+    "1501371": {
+      "course_name": "Design and Analysis of Algorithms",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ALL_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501215",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "COURSE",
+            "course_id": "1501279",
+            "concurrent_allowed": false
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1501215 AND 1501279"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during major compulsory part 2 review."
+    },
+    "1501372": {
+      "course_name": "Formal Languages and Automata Theory",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ALL_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501215",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "COURSE",
+            "course_id": "1501279",
+            "concurrent_allowed": false
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1501215 AND 1501279"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed requirement."
+    },
+    "1501394": {
+      "course_name": "Junior Project in CS",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ALL_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501215",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "STANDING",
+            "text": "Junior Standing"
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1501215 AND Junior Standing"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed requirement."
+    },
+    "1501397": {
+      "course_name": "CO-OP Summer Training",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ANY_OF",
+        "items": [
+          {
+            "type": "STANDING",
+            "text": "Junior Standing"
+          },
+          {
+            "type": "STANDING",
+            "text": "Senior Standing"
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "Junior/Senior standing",
+        "Junior Standing"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed requirement."
+    },
+    "1501494": {
+      "course_name": "Senior Project in CS",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501394",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501394"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed requirement."
+    },
+    "1501459": {
+      "course_name": "Information Security",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed requirement."
+    },
+    "1501454": {
+      "course_name": "Cloud Computing",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed requirement."
+    },
+    "1501341": {
+      "course_name": "Web Programming",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501116",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501116"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 1 review."
+    },
+    "1501342": {
+      "course_name": "2D/3D Computer Animation",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501246",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501246"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 1 review."
+    },
+    "1501343": {
+      "course_name": "Interactive 3D Design",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501246",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501246"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 1 review."
+    },
+    "1501344": {
+      "course_name": "2D Character Design",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "STANDING",
+        "text": "Junior Standing"
+      },
+      "source_requirement_variants": [
+        "Junior Standing"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 1 review."
+    },
+    "1501355": {
+      "course_name": "Computer Architecture",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501252",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501252"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 1 review."
+    },
+    "1501365": {
+      "course_name": "Advanced Database Systems",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501263",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501263"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 1 review."
+    },
+    "1501370": {
+      "course_name": "Numerical Methods",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ALL_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501116",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "COURSE",
+            "course_id": "1440211",
+            "concurrent_allowed": false
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1501116 and 1440211",
+        "1501116"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 1 review."
+    },
+    "1501433": {
+      "course_name": "Introduction to Computer Vision and Image Processing",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 2 review."
+    },
+    "1501440": {
+      "course_name": "Introduction to Computer Graphics",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 2 review."
+    },
+    "1501441": {
+      "course_name": "Multimedia Technology",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ALL_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501215",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "STANDING",
+            "text": "Senior Standing"
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "Senior standing",
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 2 review."
+    },
+    "1501442": {
+      "course_name": "3D Character Animation and Visual FX",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501342",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501342"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 2 review."
+    },
+    "1501443": {
+      "course_name": "Human Computer Interaction",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ALL_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501341",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "ANY_OF",
+            "items": [
+              {
+                "type": "COURSE",
+                "course_id": "1501246",
+                "concurrent_allowed": false
+              },
+              {
+                "type": "COURSE",
+                "course_id": "1501247",
+                "concurrent_allowed": false
+              }
+            ]
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1501341 AND (1501246 OR 1501247)"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 2 review."
+    },
+    "1501444": {
+      "course_name": "Game Design and Development",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501343",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501343"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 2 review."
+    },
+    "1501445": {
+      "course_name": "IT Application in E-Commerce",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ANY_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501211",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "COURSE",
+            "course_id": "1501341",
+            "concurrent_allowed": false
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1501211 OR 1501341"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed prerequisite during major electives part 2 review."
+    },
+    "1501451": {
+      "course_name": "Computer Networks",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501352",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501352"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during final major electives review."
+    },
+    "1501458": {
+      "course_name": "Mobile Application and Design",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ANY_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501215",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "COURSE",
+            "course_id": "1501214",
+            "concurrent_allowed": false
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1501215",
+        "1501215 or 1501214"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during final major electives review."
+    },
+    "1501465": {
+      "course_name": "Development of Web Applications",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ALL_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501263",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "COURSE",
+            "course_id": "1501341",
+            "concurrent_allowed": false
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1501263 AND 1501341"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during final major electives review."
+    },
+    "1501474": {
+      "course_name": "Compiler Design",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501372",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501372"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during final major electives review."
+    },
+    "1501490": {
+      "course_name": "Topics in Computer Science I",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "ANY_OF",
+        "items": [
+          {
+            "type": "COURSE",
+            "course_id": "1501215",
+            "concurrent_allowed": false
+          },
+          {
+            "type": "COURSE",
+            "course_id": "1501214",
+            "concurrent_allowed": false
+          }
+        ]
+      },
+      "source_requirement_variants": [
+        "1501215",
+        "1501215 or 1501214"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during final major electives review."
+    },
+    "1501491": {
+      "course_name": "Topics in Computer Science II",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during final major electives review."
+    },
+    "1501492": {
+      "course_name": "Special Topics in IT",
+      "prerequisite_status": "VERIFIED",
+      "requirement": {
+        "type": "COURSE",
+        "course_id": "1501215",
+        "concurrent_allowed": false
+      },
+      "source_requirement_variants": [
+        "1501215"
+      ],
+      "review_status": "OWNER_CONFIRMED",
+      "review_note": "Project owner confirmed selected requirement during final major electives review."
+    }
+  },
+  "standing_definitions": {
+    "Junior Standing": {
+      "classification_min_earned_credits": 65,
+      "classification_max_earned_credits": 98,
+      "prerequisite_min_earned_credits": 65
+    },
+    "Senior Standing": {
+      "classification_min_earned_credits": 99,
+      "classification_max_earned_credits": null,
+      "prerequisite_min_earned_credits": 99
+    }
+  }
+}

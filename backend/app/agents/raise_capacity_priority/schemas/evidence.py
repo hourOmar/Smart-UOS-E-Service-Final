@@ -1,9 +1,10 @@
 """
 Aggregated Supabase evidence for a single Raise Capacity request.
 
-This is NOT the final Agent 2 evidence package — it is only the Supabase
-portion. Later phases add UoS study-plan evidence, deterministic
-calculations, course-offering evidence, and the prioritization rules.
+This is NOT the final evidence package — it is only the database portion
+(including the student's current study plan and its total credit hours).
+Later steps add the knowledge-file evaluations and deterministic
+calculations.
 """
 
 from typing import Optional
@@ -17,6 +18,7 @@ from ..schemas.raise_capacity import RaiseCapacityDetails
 from ..schemas.request import RequestRecord
 from ..schemas.section import SectionInfo
 from ..schemas.student import StudentAcademicProfile
+from ..schemas.study_plan import StudyPlanInfo
 
 
 class SupabaseEvidence(BaseModel):
@@ -27,3 +29,4 @@ class SupabaseEvidence(BaseModel):
     course: CourseInfo
     section: SectionInfo
     previous_attempts: PreviousAttemptsSummary
+    study_plan: StudyPlanInfo

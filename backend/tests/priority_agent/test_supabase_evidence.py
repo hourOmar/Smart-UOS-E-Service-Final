@@ -3,8 +3,9 @@ Unit tests for the Supabase retrieval layer (app/retrieval), using
 FakeSupabaseClient so nothing here touches a live Supabase project.
 
 Fixture data uses the confirmed real column types: Course_ID and
-Program_ID are int (integer/smallint), Request_ID/Student_ID/Section_ID
-are str (character varying).
+Program_ID are text (leading zeros preserved), Request_ID/Student_ID/
+Section_ID are str (character varying). Terms use the YYYYSS convention
+(01 Fall, 02 Spring, 03 Summer).
 
 Covers the required scenarios: (1) successful retrieval, (2) unknown
 Request_ID, (3) non-Raise-Capacity request, (4) missing student, (5)
@@ -42,9 +43,9 @@ REQUEST_ROW = {
 RAISE_CAPACITY_ROW = {
     "Request_ID": "REQ-1001",
     "Reason": "Needed to graduate on time.",
-    "Course_ID": 1501215,
+    "Course_ID": "1501215",
     "Section_ID": "SEC-1",
-    "Term": 202510,
+    "Term": 202601,
 }
 STUDENT_ROW = {
     "Student_ID": "S1001",
@@ -52,23 +53,23 @@ STUDENT_ROW = {
     "Student_Email": "sara@example.com",
     "CGPA": 3.42,
     "Completed_Hours": 66,
-    "Program_ID": 12,
-    "Expected_Graduation_Term": 202710,
+    "Program_ID": "1501",
+    "Expected_Graduation_Term": 202702,
 }
 PROGRAM_ROW = {
-    "Program_ID": 12,
+    "Program_ID": "1501",
     "Program_Name": "Computer Science",
     "College_Name": "College of Computing and Informatics",
 }
 COURSE_ROW = {
-    "Course_ID": 1501215,
+    "Course_ID": "1501215",
     "Course_Name": "Data Structures",
     "Credit_Hours": 3,
 }
 SECTION_ROW = {
     "Section_ID": "SEC-1",
-    "Course_ID": 1501215,
-    "Term": 202510,
+    "Course_ID": "1501215",
+    "Term": 202601,
     "Current_Capacity": 30,
     "Total_Capacity": 30,
     "Additional_Capacity": 5,
@@ -76,10 +77,10 @@ SECTION_ROW = {
 TAKES_ROWS = [
     {
         "Student_ID": "S1001",
-        "Course_ID": 1501215,
+        "Course_ID": "1501215",
         "Grade": "D",
         "Section_ID": "SEC-OLD",
-        "Term": 202410,
+        "Term": 202501,
     }
 ]
 
@@ -102,15 +103,15 @@ def test_successful_retrieval():
     evidence = get_supabase_evidence("REQ-1001", client=client)
 
     assert evidence.request.request_id == "REQ-1001"
-    assert evidence.raise_capacity.course_id == 1501215
-    assert isinstance(evidence.raise_capacity.course_id, int)
+    assert evidence.raise_capacity.course_id == "1501215"
+    assert isinstance(evidence.raise_capacity.course_id, str)
     assert evidence.student.student_id == "S1001"
     assert evidence.program is not None
-    assert evidence.program.program_id == 12
-    assert isinstance(evidence.program.program_id, int)
-    assert evidence.course.course_id == 1501215
+    assert evidence.program.program_id == "1501"
+    assert isinstance(evidence.program.program_id, str)
+    assert evidence.course.course_id == "1501215"
     assert evidence.section.section_id == "SEC-1"
-    assert evidence.section.course_id == 1501215
+    assert evidence.section.course_id == "1501215"
 
 
 def test_student_email_not_included_in_evidence():
@@ -198,7 +199,7 @@ def test_missing_section_raises():
 
 def test_mismatched_section_raises():
     tables = _baseline_tables()
-    tables["Section"][0]["Term"] = 202520
+    tables["Section"][0]["Term"] = 202602
     client = FakeSupabaseClient(tables)
 
     with pytest.raises(SectionMismatchError):
@@ -216,25 +217,25 @@ def test_correct_section_retrieved_when_section_id_is_reused():
     tables["Section"] = [
         {
             "Section_ID": "SEC-1",
-            "Course_ID": 1501116,  # different course, same Section_ID
-            "Term": 202510,
+            "Course_ID": "1501116",  # different course, same Section_ID
+            "Term": 202601,
             "Current_Capacity": 99,
             "Total_Capacity": 99,
             "Additional_Capacity": 99,
         },
         {
             "Section_ID": "SEC-1",
-            "Course_ID": 1501215,  # correct course, different term
-            "Term": 202410,
+            "Course_ID": "1501215",  # correct course, different term
+            "Term": 202501,
             "Current_Capacity": 88,
             "Total_Capacity": 88,
             "Additional_Capacity": 88,
         },
-        dict(SECTION_ROW),  # the actual match: SEC-1 / 1501215 / 202510
+        dict(SECTION_ROW),  # the actual match: SEC-1 / 1501215 / 202601
         {
             "Section_ID": "SEC-1",
-            "Course_ID": 1501279,  # another different course, same Section_ID
-            "Term": 202510,
+            "Course_ID": "1501279",  # another different course, same Section_ID
+            "Term": 202601,
             "Current_Capacity": 77,
             "Total_Capacity": 77,
             "Additional_Capacity": 77,
@@ -245,18 +246,16 @@ def test_correct_section_retrieved_when_section_id_is_reused():
     evidence = get_supabase_evidence("REQ-1001", client=client)
 
     assert evidence.section.section_id == "SEC-1"
-    assert evidence.section.course_id == 1501215
-    assert evidence.section.term == 202510
+    assert evidence.section.course_id == "1501215"
+    assert evidence.section.term == 202601
     assert evidence.section.current_capacity == SECTION_ROW["Current_Capacity"]
     assert evidence.section.total_capacity == SECTION_ROW["Total_Capacity"]
     assert evidence.section.additional_capacity == SECTION_ROW["Additional_Capacity"]
 
 
-# Regression test for the real-data bug: Course_ID is an integer in
-# Postgres. A Section row and its Raise_Capacity request sharing the same
-# integer Course_ID must be recognized as matching (previously, forcing
-# Course_ID through a generic string type broke this comparison).
-def test_matching_integer_course_id_does_not_raise_mismatch():
+# Course_ID is text in Postgres: a Section row and its Raise_Capacity
+# request sharing the same text Course_ID must match.
+def test_matching_text_course_id_does_not_raise_mismatch():
     client = FakeSupabaseClient(_baseline_tables())
 
     evidence = get_supabase_evidence("REQ-1001", client=client)
@@ -286,50 +285,46 @@ def test_one_previous_attempt():
     assert evidence.previous_attempts.attempted_before is True
     assert evidence.previous_attempts.number_of_attempts == 1
     assert len(evidence.previous_attempts.records) == 1
-    assert evidence.previous_attempts.records[0].course_id == 1501215
+    assert evidence.previous_attempts.records[0].course_id == "1501215"
 
 
-# 9. Multiple previous attempts (also exercises the current-request-context
-# exclusion: a Takes row sharing the request's own Section_ID/Term is kept
-# in `records` but not counted as a genuine previous attempt).
+# 9. Multiple previous attempts (a request-term record is kept in `records`
+# but never counted as a previous attempt).
 def test_multiple_previous_attempts():
     tables = _baseline_tables()
     tables["Takes"] = [
         {
             "Student_ID": "S1001",
-            "Course_ID": 1501215,
+            "Course_ID": "1501215",
             "Grade": "D",
             "Section_ID": "SEC-OLD1",
-            "Term": 202410,
+            "Term": 202501,
         },
         {
             "Student_ID": "S1001",
-            "Course_ID": 1501215,
+            "Course_ID": "1501215",
             "Grade": "F",
             "Section_ID": "SEC-OLD2",
-            "Term": 202420,
+            "Term": 202502,
         },
         {
             "Student_ID": "S1001",
-            "Course_ID": 1501215,
+            "Course_ID": "1501215",
             "Grade": None,
             "Section_ID": "SEC-1",
-            "Term": 202510,
+            "Term": 202601,
         },
     ]
     client = FakeSupabaseClient(tables)
 
     evidence = get_supabase_evidence("REQ-1001", client=client)
 
+    assert evidence.previous_attempts.status == "PREVIOUSLY_ATTEMPTED"
     assert evidence.previous_attempts.attempted_before is True
     assert evidence.previous_attempts.number_of_attempts == 2
     assert len(evidence.previous_attempts.records) == 3
-    flagged = [
-        record
-        for record in evidence.previous_attempts.records
-        if record.matches_current_request_context
-    ]
-    assert len(flagged) == 1
+    relations = [record.term_relation for record in evidence.previous_attempts.records]
+    assert relations == ["BEFORE_REQUEST_TERM", "BEFORE_REQUEST_TERM", "REQUEST_TERM"]
 
 
 def test_nullable_grade_preserved():
@@ -392,3 +387,69 @@ def test_nullable_reason():
     evidence = get_supabase_evidence("REQ-1001", client=client)
 
     assert evidence.raise_capacity.reason is None
+
+
+def _previous(tables):
+    return get_supabase_evidence("REQ-1001", client=FakeSupabaseClient(tables)).previous_attempts
+
+
+def _takes(grade, term, section="SEC-X", course="1501215"):
+    return {"Student_ID": "S1001", "Course_ID": course, "Grade": grade, "Section_ID": section, "Term": term}
+
+
+@pytest.mark.parametrize("grade", ["A", "D", "F", "WF", "FA", "W", "I", None, "XYZ"])
+def test_any_earlier_record_counts_as_a_previous_attempt_whatever_the_grade(grade):
+    tables = _baseline_tables()
+    tables["Takes"] = [_takes(grade, 202502)]
+    summary = _previous(tables)
+    assert summary.status == "PREVIOUSLY_ATTEMPTED"
+    assert summary.attempted_before is True
+    assert summary.number_of_attempts == 1
+
+
+def test_same_term_records_in_any_section_do_not_count():
+    tables = _baseline_tables()
+    tables["Takes"] = [_takes(None, 202601, "SEC-1"), _takes("F", 202601, "SEC-OTHER")]
+    summary = _previous(tables)
+    assert summary.status == "NEVER_ATTEMPTED"
+    assert summary.attempted_before is False
+    assert summary.number_of_attempts == 0
+    assert {r.term_relation for r in summary.records} == {"REQUEST_TERM"}
+
+
+def test_future_term_records_do_not_count():
+    tables = _baseline_tables()
+    tables["Takes"] = [_takes("A", 202602), _takes("B", 202701)]
+    summary = _previous(tables)
+    assert summary.status == "NEVER_ATTEMPTED"
+    assert {r.term_relation for r in summary.records} == {"AFTER_REQUEST_TERM"}
+
+
+def test_unorderable_record_makes_the_status_unknown():
+    tables = _baseline_tables()
+    tables["Takes"] = [_takes("A", 202509)]
+    summary = _previous(tables)
+    assert summary.status == "UNKNOWN"
+    assert summary.attempted_before is None
+
+
+def test_confirmed_earlier_attempt_wins_over_an_unorderable_record():
+    tables = _baseline_tables()
+    tables["Takes"] = [_takes("A", 202509), _takes("F", 202502)]
+    assert _previous(tables).status == "PREVIOUSLY_ATTEMPTED"
+
+
+def test_leading_zero_course_and_program_ids_are_preserved():
+    tables = _baseline_tables()
+    for table in ("Raise_Capacity", "Course", "Section"):
+        tables[table][0]["Course_ID"] = "0202213"
+    tables["Takes"] = [_takes("C", 202502, course="0202213")]
+    tables["Student"][0]["Program_ID"] = "0302"
+    tables["Program"][0]["Program_ID"] = "0302"
+    evidence = get_supabase_evidence("REQ-1001", client=FakeSupabaseClient(tables))
+    assert evidence.raise_capacity.course_id == "0202213"
+    assert evidence.course.course_id == "0202213"
+    assert evidence.student.program_id == "0302"
+    assert evidence.program.program_id == "0302"
+    assert evidence.previous_attempts.records[0].course_id == "0202213"
+    assert evidence.previous_attempts.status == "PREVIOUSLY_ATTEMPTED"

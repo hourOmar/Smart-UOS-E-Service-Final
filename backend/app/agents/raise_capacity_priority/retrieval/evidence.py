@@ -1,11 +1,12 @@
 """
-Aggregated Supabase-only evidence retrieval for a Raise Capacity request.
+Aggregated database evidence retrieval for a Raise Capacity request.
 
-get_supabase_evidence(request_id) performs the fixed Step 1-7 retrieval
-flow and returns one structured SupabaseEvidence object. This is NOT the
-final Agent 2 evidence package — later phases add UoS, deterministic, and
-course-offering evidence, plus the prioritization rules and Gemini's
-decision.
+get_supabase_evidence(request_id) performs the fixed retrieval flow (Request,
+Raise_Capacity, Student, Program, Course, Section, Takes for the requested
+course, and the student's current study plan with its total credit hours) and
+returns one structured SupabaseEvidence object. This is NOT the final evidence
+package — the knowledge-file evaluations and deterministic calculations are
+added later; the prioritization policy and Gemini's decision are separate.
 """
 
 from typing import Any
@@ -17,6 +18,7 @@ from ..retrieval.raise_capacity import get_raise_capacity_details
 from ..retrieval.request import get_request
 from ..retrieval.section import get_section
 from ..retrieval.student import get_student
+from ..retrieval.study_plan import get_study_plan
 from ..schemas.evidence import SupabaseEvidence
 
 
@@ -38,10 +40,10 @@ def get_supabase_evidence(request_id: str, client: Any) -> SupabaseEvidence:
         client,
         student_id=student.student_id,
         course_id=raise_capacity.course_id,
-        current_section_id=raise_capacity.section_id,
         current_term=raise_capacity.term,
     )
 
+    study_plan = get_study_plan(client, student.program_id)
     return SupabaseEvidence(
         request=request,
         raise_capacity=raise_capacity,
@@ -50,4 +52,5 @@ def get_supabase_evidence(request_id: str, client: Any) -> SupabaseEvidence:
         course=course,
         section=section,
         previous_attempts=previous_attempts,
+        study_plan=study_plan,
     )

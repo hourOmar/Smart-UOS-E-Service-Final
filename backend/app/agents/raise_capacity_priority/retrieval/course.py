@@ -11,7 +11,7 @@ from ..schemas.course import CourseInfo
 _COLUMNS = "Course_ID, Course_Name, Credit_Hours"
 
 
-def get_course(client: Any, course_id: int) -> CourseInfo:
+def get_course(client: Any, course_id: str) -> CourseInfo:
     rows = select_rows(client, "Course", _COLUMNS, {"Course_ID": course_id})
     if not rows:
         raise CourseNotFoundError(f"No Course found for Course_ID={course_id!r}.")

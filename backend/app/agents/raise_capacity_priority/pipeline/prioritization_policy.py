@@ -1,19 +1,15 @@
 """
-Loads the supplied prioritization policy unchanged, for Phase 6 to pass
+Loads the approved prioritization policy (knowledge/prioritization_rules.json) unchanged, to pass
 to Gemini ALONGSIDE the evidence package — not embedded inside it. See
 app/pipeline/build_prioritization_evidence.py's module docstring for the
 reasoning.
 """
 
 import json
-from pathlib import Path
 
-_POLICY_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "knowledge"
-    / "raise_capacity"
-    / "prioritization_rules.json"
-)
+from .. import KNOWLEDGE_DIR
+
+_POLICY_PATH = KNOWLEDGE_DIR / "prioritization_rules.json"
 
 
 def load_prioritization_policy() -> dict:

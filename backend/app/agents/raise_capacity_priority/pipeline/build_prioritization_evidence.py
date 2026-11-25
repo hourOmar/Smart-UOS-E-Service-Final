@@ -1,54 +1,35 @@
 """
-Phase 5: assembles the final PrioritizationEvidencePackage for one
-Raise Capacity request. This is an evidence-BUILDING layer, not a
-decision layer — nothing here calls Gemini, computes a score, or
-produces HIGH/MEDIUM/LOW.
+Assembles the final PrioritizationEvidencePackage for one Raise Capacity
+request. This is an evidence-BUILDING layer, not a decision layer — nothing
+here calls Gemini, computes a score, or produces HIGH/MEDIUM/LOW.
 
-Two functions, deliberately split:
+- assemble_prioritization_evidence(...) is a pure function of data already
+  retrieved and calculated. No I/O, easy to unit test.
+- build_prioritization_evidence(request_id, client) is the orchestrator: it
+  reads the database (read-only), loads nothing from the web, runs the
+  deterministic calculations and passes the results to the assembler.
 
-- assemble_prioritization_evidence(...) is a pure function of data
-  already retrieved (Phase 2 SupabaseEvidence, Phase 3 UoSCourseEvidence,
-  Phase 4 DeterministicEvidence). No I/O, easy to unit test.
-- build_prioritization_evidence(request_id, ...) is the orchestrator:
-  it calls the existing Phase 2/3/4 retrieval and calculation functions
-  (never reimplementing their logic) and passes the results to the pure
-  assembler.
-
-Design choice — the prioritization policy is NOT embedded in this
-package. app/pipeline/prioritization_policy.py loads it separately.
-Reasons:
-  1. The original Phase 1 architecture describes Gemini receiving
-     "evidence + prioritization policy" as two distinct inputs, not one
-     merged object.
-  2. The policy is static and student-independent; embedding a copy of
-     it inside every per-student evidence package would be redundant
-     and would blur "facts about this request" with "general decision
-     policy" in the same JSON tree — exactly the mixing Phase 5 is
-     meant to avoid.
-  3. Keeping them separate makes it trivial to confirm the policy was
-     never silently rewritten (it is loaded byte-for-byte from JSON,
-     independent of any per-request evidence).
+Sources: the database (Request, Raise_Capacity, Student, Program, Course,
+Section, Takes, Program_Study_Plan_Course, Program_Study_Plan_Total) and the
+agent's own knowledge files (course_prerequisites.json,
+course_offerings.json, grade_policy.json). The prioritization policy is NOT
+embedded here; pipeline/prioritization_policy.py loads it separately.
 
 Error handling: a request that cannot be identified at all (unknown
-Request_ID, wrong request type, missing Raise_Capacity/Student/Program/
-Course/Section rows, or the UoS page being entirely unreachable/
-unparseable) is a FATAL failure — the existing typed exceptions from
-Phase 2/3 are allowed to propagate unmodified, not caught here.
-Legitimately missing/unresolved academic evidence (null
-Expected_Graduation_Term, a course missing from the offerings KB, a
-UoS prerequisite conflict, ...) is NOT fatal — the package still
-builds, with that evidence explicitly marked missing/unresolved/
-conflicting in evidence_quality.
+Request_ID, wrong request type, missing Raise_Capacity/Student/Course/
+Section rows, or a dangling Program_ID) is FATAL — the typed retrieval
+exceptions propagate unmodified. Legitimately missing, unresolved or
+conflicting academic evidence is NOT fatal: the package still builds, with
+the problem stated in evidence_quality for Gemini to weigh.
 """
 
 from typing import Any, Optional
 
-from ..deterministic.evidence import build_deterministic_evidence
-from ..deterministic.prerequisite_evaluator import required_prerequisite_course_ids
+from ..deterministic.evidence import build_deterministic_evidence, related_course_ids
+from ..deterministic.program_scope import ProgramScopeEvidence, build_program_scope
 from ..deterministic.term import calculate_terms_until_graduation, parse_term
 from ..retrieval.evidence import get_supabase_evidence
 from ..retrieval.prerequisite_history import get_takes_for_courses
-from ..retrieval.uos_academic_info import get_uos_course_evidence
 from ..schemas.deterministic import DeterministicEvidence
 from ..schemas.evidence import SupabaseEvidence
 from ..schemas.prioritization_evidence import (
@@ -57,48 +38,46 @@ from ..schemas.prioritization_evidence import (
     PrioritizationEvidencePackage,
     RequestContext,
 )
-from ..schemas.uos import UoSCourseEvidence
 
 
-def build_prioritization_evidence(
-    request_id: str, client: Any
-) -> PrioritizationEvidencePackage:
-    # Ported: `client` is required (a read-only database client, see
-    # ../db_client.py); there is no Supabase client default.
+def build_prioritization_evidence(request_id: str, client: Any) -> PrioritizationEvidencePackage:
     supabase_evidence = get_supabase_evidence(request_id, client=client)
-    uos_evidence = get_uos_course_evidence(supabase_evidence.raise_capacity.course_id)
+    scope = _program_scope(supabase_evidence)
+    transcript = []
+    if scope.status == "SUPPORTED":
+        transcript = get_takes_for_courses(
+            client,
+            supabase_evidence.student.student_id,
+            related_course_ids(supabase_evidence.raise_capacity.course_id),
+        )
+    deterministic_evidence = build_deterministic_evidence(supabase_evidence, transcript, scope)
+    return assemble_prioritization_evidence(supabase_evidence, scope, deterministic_evidence)
 
-    required_course_ids = required_prerequisite_course_ids(uos_evidence.prerequisites)
-    prerequisite_takes_records = get_takes_for_courses(
-        client, supabase_evidence.student.student_id, required_course_ids
+
+def _program_scope(supabase_evidence: SupabaseEvidence) -> ProgramScopeEvidence:
+    program = supabase_evidence.program
+    return build_program_scope(
+        supabase_evidence.student.program_id, program.program_name if program is not None else None
     )
-
-    deterministic_evidence = build_deterministic_evidence(
-        supabase_evidence, uos_evidence, prerequisite_takes_records
-    )
-
-    return assemble_prioritization_evidence(supabase_evidence, uos_evidence, deterministic_evidence)
 
 
 def assemble_prioritization_evidence(
     supabase_evidence: SupabaseEvidence,
-    uos_evidence: UoSCourseEvidence,
+    scope: ProgramScopeEvidence,
     deterministic_evidence: DeterministicEvidence,
 ) -> PrioritizationEvidencePackage:
-    request_context = _build_request_context(supabase_evidence)
     graduation = _build_graduation_evidence(supabase_evidence)
-    evidence_quality = _build_evidence_quality(graduation, deterministic_evidence, uos_evidence)
-
     return PrioritizationEvidencePackage(
-        request_context=request_context,
+        request_context=_build_request_context(supabase_evidence),
+        program_scope=scope,
         graduation=graduation,
         degree_progress=deterministic_evidence.remaining_credits,
-        requested_course_requirement=uos_evidence.category,
+        requested_course_requirement=deterministic_evidence.course_requirement,
         course_availability=deterministic_evidence.requested_course_offering,
         previous_attempts=deterministic_evidence.previous_attempt_summary,
         prerequisite_completion=deterministic_evidence.prerequisite_completion,
         progression=deterministic_evidence.progression_evidence,
-        evidence_quality=evidence_quality,
+        evidence_quality=_build_evidence_quality(scope, graduation, deterministic_evidence),
     )
 
 
@@ -136,14 +115,20 @@ def _build_graduation_evidence(supabase_evidence: SupabaseEvidence) -> Graduatio
 
 
 def _build_evidence_quality(
+    scope: ProgramScopeEvidence,
     graduation: GraduationEvidence,
     deterministic_evidence: DeterministicEvidence,
-    uos_evidence: UoSCourseEvidence,
 ) -> EvidenceQualitySummary:
     issues: list[str] = []
     has_missing = False
     has_conflicting = False
 
+    if scope.status != "SUPPORTED":
+        if scope.status == "MISSING_PROGRAM":
+            has_missing = True
+        issues.append(scope.note)
+
+    # Factor 1 — graduation proximity
     if graduation.expected_graduation_term is None:
         has_missing = True
         issues.append("Student's Expected_Graduation_Term is missing.")
@@ -170,55 +155,69 @@ def _build_evidence_quality(
                 "be calculated."
             )
 
+    # Factor 2 — degree progress
     remaining = deterministic_evidence.remaining_credits
     if remaining.status == "UNRESOLVED":
         has_missing = True
-        issues.append(f"Remaining credits could not be calculated: {remaining.note}")
+        issues.append(f"Degree progress could not be calculated: {remaining.note}")
     elif remaining.status == "ANOMALY":
         has_conflicting = True
-        issues.append(f"Remaining-credits calculation is anomalous: {remaining.note}")
+        issues.append(f"Degree progress is inconsistent: {remaining.note}")
 
-    if not uos_evidence.category.found:
+    # Factor 3 — course requirement
+    requirement = deterministic_evidence.course_requirement
+    if requirement.requirement_type == "UNKNOWN":
         has_missing = True
-        issues.append(
-            "Requested course was not found in the official UoS Degree "
-            "Requirements categories."
-        )
+        issues.append(f"The requested course's requirement type is unknown: {requirement.note}")
 
+    # Factor 4 — course availability (evaluated programs only)
     offering = deterministic_evidence.requested_course_offering
-    if not offering.found_in_kb:
+    if scope.status == "SUPPORTED":
+        if not offering.found_in_kb or not offering.term_suffix_supported:
+            has_missing = True
+            issues.append(f"Course availability could not be calculated: {offering.notes[0]}")
+        elif offering.next_offering_status != "KNOWN":
+            has_missing = True
+            issues.append(
+                "The next usual offering of the requested course cannot be determined from the offering "
+                f"information ({offering.next_offering_status})."
+            )
+        elif offering.earlier_unconfirmed_offering_terms:
+            issues.append(
+                "Offering information is UNKNOWN for term(s) "
+                f"{offering.earlier_unconfirmed_offering_terms} before the next known usual offering "
+                f"({offering.next_known_offering_term})."
+            )
+
+    # Factor 5 — previous attempts
+    attempts = deterministic_evidence.previous_attempt_summary
+    if attempts.status == "UNKNOWN":
         has_missing = True
         issues.append(
-            "Requested course was not found in the local course-offerings "
-            "knowledge base."
-        )
-    if not offering.term_suffix_supported:
-        has_missing = True
-        issues.append(
-            "Request Term suffix is not a supported semester code (01/02/03); "
-            "next-semester evidence is unresolved."
+            "Whether the requested course was attempted before cannot be determined: "
+            f"{attempts.unknown_term_records} transcript record(s) have a term whose order cannot be determined."
         )
 
+    # Factor 6 — prerequisite completion (evaluated programs only)
     prereq = deterministic_evidence.prerequisite_completion
-    if prereq.status == "UNRESOLVED":
-        has_missing = True
-        issues.append(f"Prerequisite completion could not be determined: {prereq.reason}")
-    elif prereq.status == "CONFLICT":
-        has_conflicting = True
-        issues.append(
-            "Official UoS prerequisite sources conflict: "
-            f"{prereq.uos_conflict_reason or prereq.reason}"
-        )
+    if prereq.knowledge_status != "NOT_EVALUATED":
+        if prereq.status == "UNRESOLVED":
+            has_missing = True
+            issues.append(f"Prerequisite completion could not be determined: {prereq.reason}")
+        elif prereq.status == "CONFLICT":
+            has_conflicting = True
+            issues.append(f"Prerequisite information conflicts: {prereq.reason}")
 
+    # Factor 7 — academic progression (evaluated programs only)
     progression = deterministic_evidence.progression_evidence
-    if progression.dependent_courses_missing_from_offerings_kb > 0:
-        has_missing = True
+    if progression.evaluated and progression.unresolved_dependents:
         issues.append(
-            f"{progression.dependent_courses_missing_from_offerings_kb} dependent "
-            "course(s) are missing from the local course-offerings knowledge base."
+            f"For {progression.unresolved_dependents} dependent course(s) it cannot be determined whether "
+            "delaying the requested course would affect them."
         )
 
     return EvidenceQualitySummary(
+        program_in_scope=scope.status == "SUPPORTED",
         has_missing_evidence=has_missing,
         has_conflicting_evidence=has_conflicting,
         issues=issues,

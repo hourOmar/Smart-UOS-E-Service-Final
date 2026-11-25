@@ -5,11 +5,14 @@ The complete Request Prioritization Agent: request_id in, validated result out.
         -> build_prioritization_evidence(request_id, client)  (read-only transaction)
         -> load_prioritization_policy()
         -> get_priority_decision(evidence, policy)            (no transaction open)
-        -> check_factor_signals(signals, evidence)            (explicit rules only)
         -> FinalAgentResult
 
-Python assigns no priority anywhere in this file; the value returned is exactly
-what Gemini decided.
+Python prepares the evidence and validates only the STRUCTURE of Gemini's
+reply (schema, allowed values, non-empty explanations — see
+schemas/priority_decision.py). It never assigns, changes or rejects a
+structurally valid recommendation for academic reasons: the priority,
+reasoning, factor explanations and factor signals returned are exactly what
+Gemini produced.
 """
 
 from dataclasses import dataclass
@@ -18,7 +21,6 @@ from app.core.database import read_only
 
 from .db_client import DatabaseClient
 from .pipeline.build_prioritization_evidence import build_prioritization_evidence
-from .pipeline.factor_signals import check_factor_signals
 from .pipeline.get_priority_decision import get_priority_decision
 from .pipeline.prioritization_policy import load_prioritization_policy
 from .schemas.prioritization_evidence import PrioritizationEvidencePackage
@@ -41,9 +43,6 @@ def prioritize_raise_capacity_request(request_id: str) -> AgentOutcome:
     evidence = collect_evidence(request_id)
     policy = load_prioritization_policy()
     decision, model = get_priority_decision(evidence, policy, context=f"request {request_id}")
-    # Signals that contradict the evidence or the policy's explicit rules fail the
-    # run (nothing is saved); they are never corrected or guessed here.
-    check_factor_signals(decision.factor_signals, evidence)
 
     result = FinalAgentResult(
         request_id=request_id,

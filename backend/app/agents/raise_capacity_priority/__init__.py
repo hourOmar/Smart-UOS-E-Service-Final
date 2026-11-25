@@ -1,22 +1,34 @@
 """Raise Capacity Request Prioritization Agent.
 
-Given a Raise Capacity request, Python collects the evidence (database records,
-the official UoS Computer Science degree page, the local knowledge base) and
-computes every factual value; Gemini then assigns HIGH, MEDIUM, LOW or
-MANUAL_REVIEW under the prioritization policy. Technical failures are errors,
-never a priority. The result is staff-only and never changes a request.
+Assesses the academic urgency of a Raise Capacity request and recommends HIGH,
+MEDIUM, LOW or MANUAL_REVIEW to the administrator. It never determines
+eligibility, approves or rejects a request, or changes a request.
 
-Ported from the standalone prototype (a separate repository; initial commit
-d10fe30). Prioritization rules, prompt, knowledge files and evidence logic are
-unchanged, except:
-- it reads through the backend's own database role (db_client.py) instead of
-  supabase-py with the service_role key;
-- the student's ID is not sent to Gemini (the justification still is);
-- the UoS page is cached for an hour;
-- Gemini is called through app.core.gemini, with the same optional fallback
-  models (only after a temporary 429/503 error).
+- Python prepares the evidence: database records (read-only, through the
+  backend's own role — db_client.py) and the agent's own validated knowledge
+  files in knowledge/ (course_prerequisites.json, course_offerings.json,
+  grade_policy.json, prioritization_rules.json). Nothing is read from the web.
+- Gemini (through app.core.gemini, with the configured fallback models only
+  after a temporary 429/503 error) evaluates the seven factors under the eight
+  policy rules and returns the priority, reasoning, seven factor explanations
+  and seven factor signals.
+- Python validates only the reply's structure and stores a valid reply
+  unchanged; it never overrides a recommendation for academic reasons.
+  Technical failures are errors, never a priority.
+
+Scope: the knowledge files cover the Computer Science program (1501); a
+student in another program (or with none) is identified in the evidence and
+Gemini is instructed to return MANUAL_REVIEW.
 """
 
+from pathlib import Path
+
 AGENT_NAME = "raise_capacity_priority"
+# The agent's knowledge files (course_offerings.json, grade_policy.json,
+# prioritization_rules.json, course_prerequisites.json) live directly here.
+KNOWLEDGE_DIR = Path(__file__).resolve().parent / "knowledge"
 # 1.1.0: per-factor signals (factor_signals) in the saved result.
-AGENT_VERSION = "1.1.0"
+# 2.0.0: database study plan and validated local knowledge files replace the
+#        UoS web page; text course/program IDs; YES/NO/UNKNOWN availability;
+#        no academic enforcement of Gemini's reply.
+AGENT_VERSION = "2.0.0"

@@ -20,7 +20,7 @@ _COLUMNS = (
 
 
 def get_section(
-    client: Any, section_id: str, expected_course_id: int, expected_term: int
+    client: Any, section_id: str, expected_course_id: str, expected_term: int
 ) -> SectionInfo:
     rows = select_rows(
         client,
