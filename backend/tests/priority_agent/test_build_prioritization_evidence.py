@@ -10,7 +10,8 @@ import pytest
 
 from app.agents.raise_capacity_priority.pipeline import build_prioritization_evidence as pipeline_module
 from app.agents.raise_capacity_priority.retrieval.errors import ProgramNotFoundError
-from priority_agent.evidence_fixtures import package, takes
+from priority_agent.evidence_fixtures import PLAN_VERSION, package, tables, takes
+from priority_agent.fakes import FakeSupabaseClient
 
 
 def test_complete_package_for_a_cs_student():
@@ -232,6 +233,28 @@ def test_no_high_medium_low_result_exists():
     text = package().model_dump_json()
     for level in ('"HIGH"', '"MEDIUM"', '"LOW"', '"MANUAL_REVIEW"'):
         assert level not in text
+
+
+def test_shared_program_id_uses_the_students_own_program_and_plan():
+    # As in the live database: Program_ID 1501 is shared by several programs, each
+    # with its own (Program_ID, Program_Name) key; the student is in Computer Science.
+    cs, ai = "Bachelor of Science in Computer Science", "Bachelor of Science in Artificial Intelligence"
+    t = tables()
+    t["Student"][0]["Program_Name"] = cs
+    t["Program"].insert(0, {"Program_ID": "1501", "Program_Name": ai, "College_Name": "CCI"})
+    for row in t["Program_Study_Plan_Course"] + t["Program_Study_Plan_Total"]:
+        row["Program_Name"] = cs if row["Program_ID"] == "1501" else "Bachelor of Science in Computer Engineering"
+    t["Program_Study_Plan_Course"].append({"Program_ID": "1501", "Program_Name": ai, "Plan_Version": "AI-1",
+                                           "Course_ID": "1501215", "Requirement_Type": "Elective", "Is_Current": True})
+    t["Program_Study_Plan_Total"].append({"Program_ID": "1501", "Program_Name": ai, "Plan_Version": "AI-1",
+                                          "Total_Credit_Hours": 130})
+
+    ev = pipeline_module.build_prioritization_evidence("REQ-1", FakeSupabaseClient(t))
+
+    assert ev.program_scope.program_name == cs
+    assert ev.requested_course_requirement.plan_version == PLAN_VERSION
+    assert ev.requested_course_requirement.requirement_type == "REQUIRED"
+    assert ev.degree_progress.total_required_credits == 123
 
 
 def test_pipeline_uses_no_web_retrieval():

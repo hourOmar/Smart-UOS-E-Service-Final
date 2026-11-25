@@ -9,6 +9,11 @@ Nothing is hardcoded or duplicated locally (e.g. no 123-credit total).
 Missing or inconsistent data is reported in the result, never guessed:
 no Program_ID, no current plan, more than one current plan version, or a
 missing / duplicated / invalid total.
+
+Both tables are keyed by (Program_ID, Program_Name) like Program itself
+(several programs share one Program_ID), so when the student's Program_Name
+is known the plan is selected by both; another program's plan under the same
+Program_ID is never used.
 """
 
 from typing import Any, Optional
@@ -21,7 +26,7 @@ _TOTAL_COLUMNS = "Program_ID, Plan_Version, Total_Credit_Hours"
 _TYPES = {"Required": "REQUIRED", "Elective": "ELECTIVE"}
 
 
-def get_study_plan(client: Any, program_id: Optional[str]) -> StudyPlanInfo:
+def get_study_plan(client: Any, program_id: Optional[str], program_name: Optional[str] = None) -> StudyPlanInfo:
     if program_id is None:
         return StudyPlanInfo(
             program_id=None, status="NO_PROGRAM", plan_version=None, requirement_types={},
@@ -29,7 +34,10 @@ def get_study_plan(client: Any, program_id: Optional[str]) -> StudyPlanInfo:
             notes=["Student.Program_ID is missing; no study plan can be identified."],
         )
 
-    rows = select_rows(client, "Program_Study_Plan_Course", _PLAN_COLUMNS, {"Program_ID": program_id})
+    program_filter = {"Program_ID": program_id}
+    if program_name is not None:
+        program_filter["Program_Name"] = program_name
+    rows = select_rows(client, "Program_Study_Plan_Course", _PLAN_COLUMNS, program_filter)
     current = [row for row in rows if row["Is_Current"] is True]
     versions = sorted({row["Plan_Version"] for row in current})
     if not versions:
@@ -55,7 +63,7 @@ def get_study_plan(client: Any, program_id: Optional[str]) -> StudyPlanInfo:
         requirement_types[row["Course_ID"]] = mapped
 
     totals = select_rows(
-        client, "Program_Study_Plan_Total", _TOTAL_COLUMNS, {"Program_ID": program_id, "Plan_Version": version}
+        client, "Program_Study_Plan_Total", _TOTAL_COLUMNS, {**program_filter, "Plan_Version": version}
     )
     total: Optional[int] = None
     if not totals:

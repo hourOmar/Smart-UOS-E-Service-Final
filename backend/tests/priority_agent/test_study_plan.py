@@ -72,6 +72,27 @@ def test_invalid_total():
     assert plan.total_status == "INVALID" and plan.total_required_credits is None
 
 
+def test_shared_program_id_selects_the_plan_by_program_name():
+    cs, ai = "Computer Science", "Artificial Intelligence"
+    plans = [{**_plan_row("1501215"), "Program_Name": cs},
+             {**_plan_row("1501215", "Elective", version="AI-1"), "Program_Name": ai}]
+    totals = [{**TOTAL, "Program_Name": cs}, {**TOTAL, "Plan_Version": "AI-1", "Total_Credit_Hours": 130, "Program_Name": ai}]
+
+    plan = get_study_plan(_client(plans, totals), "1501", cs)
+
+    assert plan.status == "OK" and plan.plan_version == "CS-1"
+    assert plan.requirement_type("1501215") == "REQUIRED"
+    assert plan.total_required_credits == 123
+    # Without the name, two programs' current plans under one ID are reported, never mixed.
+    assert get_study_plan(_client(plans, totals), "1501").status == "MULTIPLE_CURRENT_PLANS"
+
+
+def test_program_name_with_no_plan_is_no_current_plan():
+    plans = [{**_plan_row("1501215"), "Program_Name": "Computer Science"}]
+    plan = get_study_plan(_client(plans, [TOTAL]), "1501", "Artificial Intelligence")
+    assert plan.status == "NO_CURRENT_PLAN"
+
+
 def test_unexpected_requirement_type_is_unknown():
     plan = get_study_plan(_client([_plan_row("1501215", "Core")], [TOTAL]), "1501")
     assert plan.requirement_type("1501215") == "UNKNOWN"

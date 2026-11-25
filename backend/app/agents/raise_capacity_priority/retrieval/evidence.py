@@ -28,7 +28,7 @@ def get_supabase_evidence(request_id: str, client: Any) -> SupabaseEvidence:
     request = get_request(client, request_id)
     raise_capacity = get_raise_capacity_details(client, request_id)
     student = get_student(client, request.student_id)
-    program = get_program(client, student.program_id)
+    program = get_program(client, student.program_id, student.program_name)
     course = get_course(client, raise_capacity.course_id)
     section = get_section(
         client,
@@ -43,7 +43,7 @@ def get_supabase_evidence(request_id: str, client: Any) -> SupabaseEvidence:
         current_term=raise_capacity.term,
     )
 
-    study_plan = get_study_plan(client, student.program_id)
+    study_plan = get_study_plan(client, student.program_id, student.program_name)
     return SupabaseEvidence(
         request=request,
         raise_capacity=raise_capacity,

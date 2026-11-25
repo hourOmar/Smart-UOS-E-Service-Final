@@ -178,6 +178,42 @@ def test_null_program_id_returns_no_program_without_error():
     assert evidence.program is None
 
 
+# Program's key is (Program_ID, Program_Name): several programs share one ID.
+_SHARED_ID_PROGRAMS = [
+    {"Program_ID": "1501", "Program_Name": "Biomedical Informatics", "College_Name": "CCI"},
+    {"Program_ID": "1501", "Program_Name": "Artificial Intelligence", "College_Name": "CCI"},
+    dict(PROGRAM_ROW),  # Computer Science, listed last
+]
+
+
+def test_shared_program_id_selects_the_students_program_by_name():
+    tables = _baseline_tables()
+    tables["Program"] = [dict(row) for row in _SHARED_ID_PROGRAMS]
+    tables["Student"][0]["Program_Name"] = "Computer Science"
+
+    evidence = get_supabase_evidence("REQ-1001", client=FakeSupabaseClient(tables))
+
+    assert evidence.student.program_name == "Computer Science"
+    assert evidence.program.program_name == "Computer Science"
+
+
+def test_program_name_matching_no_program_row_raises():
+    tables = _baseline_tables()
+    tables["Student"][0]["Program_Name"] = "Not A Program"
+
+    with pytest.raises(ProgramNotFoundError):
+        get_supabase_evidence("REQ-1001", client=FakeSupabaseClient(tables))
+
+
+def test_shared_program_id_without_a_name_is_not_guessed():
+    tables = _baseline_tables()
+    tables["Program"] = [dict(row) for row in _SHARED_ID_PROGRAMS]  # Student row has no Program_Name
+
+    evidence = get_supabase_evidence("REQ-1001", client=FakeSupabaseClient(tables))
+
+    assert evidence.program is None
+
+
 # 6. Missing course
 def test_missing_course_raises():
     tables = _baseline_tables()

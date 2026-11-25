@@ -13,7 +13,7 @@ from ..schemas.student import StudentAcademicProfile
 
 _COLUMNS = (
     "Student_ID, Student_Name, CGPA, Completed_Hours, Program_ID, "
-    "Expected_Graduation_Term"
+    "Program_Name, Expected_Graduation_Term"
 )
 
 
@@ -32,4 +32,5 @@ def get_student(client: Any, student_id: str) -> StudentAcademicProfile:
         completed_hours=row["Completed_Hours"],
         program_id=row["Program_ID"],
         expected_graduation_term=row["Expected_Graduation_Term"],
+        program_name=row.get("Program_Name"),
     )

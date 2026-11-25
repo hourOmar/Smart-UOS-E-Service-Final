@@ -16,3 +16,6 @@ class StudentAcademicProfile(BaseModel):
     completed_hours: Optional[int]
     program_id: Optional[str]  # text, nullable, leading zeros preserved
     expected_graduation_term: Optional[int]
+    # With program_id, the key of the student's Program row (Program's primary key
+    # is (Program_ID, Program_Name): several programs share one Program_ID).
+    program_name: Optional[str] = None

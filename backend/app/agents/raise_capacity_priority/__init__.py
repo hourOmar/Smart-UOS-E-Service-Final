@@ -31,4 +31,7 @@ KNOWLEDGE_DIR = Path(__file__).resolve().parent / "knowledge"
 # 2.0.0: database study plan and validated local knowledge files replace the
 #        UoS web page; text course/program IDs; YES/NO/UNKNOWN availability;
 #        no academic enforcement of Gemini's reply.
-AGENT_VERSION = "2.0.0"
+# 2.0.1: the student's Program row and study plan are selected by
+#        (Program_ID, Program_Name), Program's real key, instead of the shared
+#        Program_ID alone (which returned an arbitrary program's name).
+AGENT_VERSION = "2.0.1"
