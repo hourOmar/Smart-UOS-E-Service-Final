@@ -2,6 +2,82 @@ import type { ReactNode } from 'react'
 import type { EvaluationRun } from '../../services/raiseCapacityReview'
 import { NOT_RECORDED, courseLabel } from './format'
 import { cleanTechnicalWording, savedText } from '../../utils/raiseCapacityExplanations'
+import {
+  checkDisplay,
+  courseCondition,
+  hasRequirementEvidence,
+  standingCondition,
+} from '../../utils/raiseCapacityEvaluation'
+import type { PrerequisiteCheckV2, StandingCheckV2 } from '../../services/raiseCapacityReview'
+
+// Evidence from agent 2.0.0+: the course's complete requirement (prerequisite
+// courses and academic standing together) was evaluated once; each card shows
+// its own conditions and the complete requirement's recorded status.
+const REQUIREMENT_LABEL: Record<string, string> = {
+  SATISFIED: 'Met', NOT_SATISFIED: 'Not met', UNRESOLVED: 'Unresolved', CONFLICT: 'Conflicting',
+}
+
+function ConditionList({ items }: { items: { text: string; status: { label: string; tone: string } }[] }) {
+  return (
+    <ul className="rca-courses__list">
+      {items.map((item, index) => (
+        <li key={index} className="rca-course">
+          <span className="rca-course__name">{item.text}</span>
+          <span className="rca-course__status" data-tone={item.status.tone}>
+            {item.status.label}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function RequirementV2({ run, names }: { run: EvaluationRun; names: Map<string, string> }) {
+  const p = run.evidence!.checks.prerequisite as unknown as PrerequisiteCheckV2
+  const { tone, label } = checkDisplay(p.status)
+  const conditions = (p.course_conditions ?? []).map((c) => courseCondition(c, (id) => courseLabel(id, names)))
+  const requirement = run.evidence!.academic_requirement
+  const details = p.details ? cleanTechnicalWording(p.details) : null
+  return (
+    <Card id="rca-check-prereq" name="Prerequisite" tone={tone} label={label}>
+      <dl className="rca-check__fields">
+        {conditions.length > 0 && (
+          <Field label={conditions.length > 1 ? 'Required courses' : 'Required course'}>
+            <ConditionList items={conditions} />
+          </Field>
+        )}
+        {requirement && p.status !== 'NOT_EVALUATED' && (
+          <Field label="Complete requirement">{REQUIREMENT_LABEL[requirement.status] ?? requirement.status}</Field>
+        )}
+      </dl>
+      {details && <p className="pcr-check__detail">{details}</p>}
+      <AgentExplanation text={run.check_explanations?.prerequisite} />
+    </Card>
+  )
+}
+
+function StandingV2({ run }: { run: EvaluationRun }) {
+  const h = run.evidence!.checks.completed_hours as unknown as StandingCheckV2
+  const { tone, label } = checkDisplay(h.status)
+  const conditions = (h.standing_conditions ?? []).map(standingCondition)
+  const details = h.details ? cleanTechnicalWording(h.details) : null
+  return (
+    <Card id="rca-check-hours" name="Completed credit hours / academic standing" tone={tone} label={label}>
+      <dl className="rca-check__fields">
+        {conditions.length > 0 && (
+          <Field label="Required standing">
+            <ConditionList items={conditions} />
+          </Field>
+        )}
+        <Field label="Completed credit hours at evaluation">
+          {h.student_completed_hours == null ? NOT_RECORDED : `${h.student_completed_hours} hours`}
+        </Field>
+      </dl>
+      {details && <p className="pcr-check__detail">{details}</p>}
+      <AgentExplanation text={run.check_explanations?.completed_hours} />
+    </Card>
+  )
+}
 
 // The eligibility check's three academic checks as colored cards (as on the Course
 // Substitution and Course Equivalency review pages). Each card holds the evidence the check
@@ -182,8 +258,11 @@ function CompletedHours({ run }: { run: EvaluationRun }) {
 
 function Capacity({ run }: { run: EvaluationRun }) {
   const c = run.evidence!.checks.capacity
-  const label = c.satisfied ? 'SPACE AVAILABLE' : 'NO SPACE'
-  const figures: [string, number][] = [
+  // Agent 2.0.0+ records UNRESOLVED (satisfied null) for missing or invalid capacity figures.
+  const unresolved = c.status === 'UNRESOLVED' || c.satisfied == null
+  const label = unresolved ? 'UNRESOLVED' : c.satisfied ? 'SPACE AVAILABLE' : 'NO SPACE'
+  const tone: Tone = unresolved ? 'unknown' : c.satisfied ? 'pass' : 'fail'
+  const figures: [string, number | null][] = [
     ['Enrolled', c.current_capacity],
     ['Total capacity', c.total_capacity],
     ['Additional capacity', c.additional_capacity],
@@ -191,14 +270,17 @@ function Capacity({ run }: { run: EvaluationRun }) {
     ['Remaining raise capacity', c.remaining_raise_capacity],
   ]
   return (
-    <Card id="rca-check-capacity" name="Section capacity" tone={c.satisfied ? 'pass' : 'fail'} label={label}>
+    <Card id="rca-check-capacity" name="Section capacity" tone={tone} label={label}>
       <dl className="rca-check__fields rca-check__fields--capacity">
         {figures.map(([k, v]) => (
           <Field key={k} label={k}>
-            {String(v)}
+            {v == null ? NOT_RECORDED : String(v)}
           </Field>
         ))}
       </dl>
+      {(c.issues ?? []).map((issue) => (
+        <p key={issue} className="pcr-check__detail">{issue}</p>
+      ))}
       <AgentExplanation text={run.check_explanations?.capacity} />
     </Card>
   )
@@ -208,10 +290,12 @@ function EligibilityChecks({ run, names }: { run: EvaluationRun; names: Map<stri
   if (!run.evidence?.checks) {
     return <p className="rv-muted">No academic checks were recorded for this evaluation.</p>
   }
+  // Runs recorded before agent 2.0.0 keep their original evidence and cards.
+  const v2 = hasRequirementEvidence(run)
   return (
     <div className="rca-checks">
-      <Prerequisite run={run} names={names} />
-      <CompletedHours run={run} />
+      {v2 ? <RequirementV2 run={run} names={names} /> : <Prerequisite run={run} names={names} />}
+      {v2 ? <StandingV2 run={run} /> : <CompletedHours run={run} />}
       <Capacity run={run} />
     </div>
   )

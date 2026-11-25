@@ -7,7 +7,7 @@ import useEligibilityEvaluation from '../hooks/useEligibilityEvaluation'
 import useCourseNames from '../hooks/useCourseNames'
 import useRaiseCapacityPriority from '../hooks/useRaiseCapacityPriority'
 import { formatDate } from '../services/studentRequests'
-import type { ReviewRecord } from '../services/raiseCapacityReview'
+import type { DecisionChoice, PrerequisiteCheckV2, ReviewRecord } from '../services/raiseCapacityReview'
 import {
   ADMIN_HOME_PATH,
   ADMIN_MENU_ITEMS,
@@ -177,8 +177,28 @@ function AdminRaiseCapacityReview() {
 
   const found = record.status === 'ready' && record.result?.kind === 'found' ? record.result.record : null
   const shownRun = evaluation.data?.current ?? null
-  const groupIds = (shownRun?.evidence?.checks.prerequisite.required_prerequisite_groups ?? []).flat().map(String)
+  const prerequisite = shownRun?.evidence?.checks.prerequisite
+  const groupIds = [
+    // Runs before agent 2.0.0: the parsed prerequisite groups.
+    ...(prerequisite?.required_prerequisite_groups ?? []).flat().map(String),
+    // Agent 2.0.0+: the course conditions of the complete requirement.
+    ...((prerequisite as unknown as PrerequisiteCheckV2 | undefined)?.course_conditions ?? [])
+      .map((c) => c.course_id ?? '')
+      .filter(Boolean),
+  ]
   const names = useCourseNames(groupIds)
+
+  // The administrator's decision form state, held here so a suggested rejection
+  // reason can select Reject and fill the explanation ("Use this reason"). It
+  // never submits: the administrator edits, submits and confirms.
+  const [choice, setChoice] = useState<DecisionChoice | null>(null)
+  const [explanation, setExplanation] = useState('')
+  const [decisionStep, setDecisionStep] = useState<'form' | 'confirm'>('form')
+  const decidable = found?.request.status === 'In Progress' && Boolean(found?.request.details)
+  const applyReason = useCallback((text: string) => {
+    setChoice('reject')
+    setExplanation(text)
+  }, [])
 
   return (
     <StudentLayout profile={identity} solidHeader homePath={ADMIN_HOME_PATH} menuItems={ADMIN_MENU_ITEMS}>
@@ -270,11 +290,23 @@ function AdminRaiseCapacityReview() {
                   onRetry={evaluation.retry}
                   finalized={autoRun === false}
                   courseNames={names}
+                  onUseReason={decidable && decisionStep === 'form' ? applyReason : null}
                 />
               </div>
             </section>
 
-            {found && <DecisionPanel key={found.request.id} record={found} onChanged={record.refresh} />}
+            {found && (
+              <DecisionPanel
+                key={found.request.id}
+                record={found}
+                choice={choice}
+                onChoiceChange={setChoice}
+                explanation={explanation}
+                onExplanationChange={setExplanation}
+                onStepChange={setDecisionStep}
+                onChanged={record.refresh}
+              />
+            )}
           </>
         )}
       </div>

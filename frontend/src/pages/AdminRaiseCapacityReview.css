@@ -1005,3 +1005,69 @@ p.rv-missing {
   font-size: 12px;
   color: var(--proto-muted);
 }
+
+/* Suggested rejection explanations (same design as the Incomplete Exam page's ier-suggest). */
+.rca-suggest-row {
+  grid-column: 1 / -1;
+}
+
+.rca-suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+  border-top: 1px solid #edf0eb;
+}
+
+.rca-suggest__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.rca-suggest__basis {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #33415c;
+}
+
+.rca-suggest__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rca-suggest__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid #d9dee5;
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.rca-suggest__tone {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--proto-muted);
+}
+
+.rca-suggest__text {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--proto-heading);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

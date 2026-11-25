@@ -30,6 +30,14 @@ const OPTIONS: { value: DecisionChoice; label: string; description: string }[] =
 
 interface DecisionPanelProps {
   record: ReviewRecord
+  /** The chosen outcome (held by the page, so "Use this reason" can select Reject). */
+  choice: DecisionChoice | null
+  onChoiceChange: (choice: DecisionChoice) => void
+  /** The explanation to the student (held by the page, so a suggested reason can fill it). */
+  explanation: string
+  onExplanationChange: (value: string) => void
+  /** Tells the page whether the form is being edited (suggestions may fill it) or confirmed. */
+  onStepChange?: (step: 'form' | 'confirm') => void
   /** Reload status and saved decision (after a save or a refusal). */
   onChanged: () => void
 }
@@ -54,10 +62,12 @@ function FinalDecision({ record, notice }: { record: ReviewRecord; notice: strin
           </div>
           <div className="rv-rec__body">
             <dl className="rv-explain">
-              <div className="rv-explain__item">
-                <dt>Explanation</dt>
-                <dd className="rv-decision__explanation">{d.explanation}</dd>
-              </div>
+              {d.explanation.trim() && (
+                <div className="rv-explain__item">
+                  <dt>Explanation</dt>
+                  <dd className="rv-decision__explanation">{d.explanation}</dd>
+                </div>
+              )}
               <div className="rv-explain__item">
                 <dt>Decided by</dt>
                 <dd>{decider(d.staffId, d.staffName)}</dd>
@@ -86,10 +96,14 @@ function FinalDecision({ record, notice }: { record: ReviewRecord; notice: strin
   )
 }
 
-function DecisionPanel({ record, onChanged }: DecisionPanelProps) {
-  const [choice, setChoice] = useState<DecisionChoice | null>(null)
-  const [explanation, setExplanation] = useState('')
-  const [step, setStep] = useState<'form' | 'confirm'>('form')
+function DecisionPanel({
+  record, choice, onChoiceChange, explanation, onExplanationChange, onStepChange, onChanged,
+}: DecisionPanelProps) {
+  const [step, setStepState] = useState<'form' | 'confirm'>('form')
+  const setStep = (next: 'form' | 'confirm') => {
+    setStepState(next)
+    onStepChange?.(next)
+  }
   const [attempted, setAttempted] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -101,9 +115,11 @@ function DecisionPanel({ record, onChanged }: DecisionPanelProps) {
   const finalized = request.status !== 'In Progress'
   const length = explanationLength(explanation)
   const choiceError = attempted && !choice ? 'Choose Approve or Reject.' : null
+  // An explanation is required for a rejection only; an approval may have none.
+  const explanationRequired = choice === 'reject'
   const explanationError =
-    attempted && length === 0
-      ? 'Enter an explanation for the decision.'
+    attempted && explanationRequired && length === 0
+      ? 'Enter an explanation for the rejection.'
       : length > MAX_EXPLANATION
         ? `The explanation can be at most ${MAX_EXPLANATION.toLocaleString('en-US')} characters.`
         : null
@@ -112,7 +128,7 @@ function DecisionPanel({ record, onChanged }: DecisionPanelProps) {
     event.preventDefault()
     setAttempted(true)
     setError(null)
-    if (!choice || length === 0 || length > MAX_EXPLANATION) return
+    if (!choice || (choice === 'reject' && length === 0) || length > MAX_EXPLANATION) return
     setStep('confirm')
   }
 
@@ -175,7 +191,7 @@ function DecisionPanel({ record, onChanged }: DecisionPanelProps) {
                       name="rv-decision"
                       value={option.value}
                       checked={choice === option.value}
-                      onChange={() => setChoice(option.value)}
+                      onChange={() => onChoiceChange(option.value)}
                     />
                     <span className="pcr-outcome__text">
                       <span className="pcr-outcome__label">{option.label}</span>
@@ -193,22 +209,29 @@ function DecisionPanel({ record, onChanged }: DecisionPanelProps) {
 
             <div className="pcr-note">
               <label htmlFor="rv-explanation" className="pcr-decision__label">
-                Explanation to student <span className="pcr-required" aria-hidden="true">*</span>
-                <span className="student-visually-hidden">(required)</span>
+                Explanation to student{' '}
+                {explanationRequired ? (
+                  <>
+                    <span className="pcr-required" aria-hidden="true">*</span>
+                    <span className="student-visually-hidden">(required)</span>
+                  </>
+                ) : (
+                  <span className="pcr-note__hint">(optional for an approval)</span>
+                )}
               </label>
               <textarea
                 id="rv-explanation"
                 className="pcr-note__input"
                 rows={5}
                 value={explanation}
-                onChange={(event) => setExplanation(event.target.value)}
+                onChange={(event) => onExplanationChange(event.target.value)}
                 aria-invalid={explanationError ? true : undefined}
                 aria-describedby="rv-explanation-help"
               />
               <span id="rv-explanation-help" className={explanationError ? 'rv-field-error' : 'pcr-note__hint'}>
                 {explanationError
                   ? `✕ ${explanationError}`
-                  : `${length.toLocaleString('en-US')} / ${MAX_EXPLANATION.toLocaleString('en-US')} characters. Saved with the decision. For a rejection, the student sees it as the reason for rejection.`}
+                  : `${length.toLocaleString('en-US')} / ${MAX_EXPLANATION.toLocaleString('en-US')} characters. Saved with the decision. Required for a rejection: the student sees it as the reason for rejection.`}
               </span>
             </div>
 
@@ -235,10 +258,14 @@ function DecisionPanel({ record, onChanged }: DecisionPanelProps) {
               notified{choice === 'reject' ? ' and sees your explanation as the reason' : ''}, and the
               decision cannot be changed afterwards.
             </p>
-            <div className="pcr-confirm__explanation">
-              <span className="req-text__label">Explanation</span>
-              <p className="req-text__body">{explanation.trim()}</p>
-            </div>
+            {explanation.trim() ? (
+              <div className="pcr-confirm__explanation">
+                <span className="req-text__label">Explanation</span>
+                <p className="req-text__body">{explanation.trim()}</p>
+              </div>
+            ) : (
+              <p className="pcr-confirm__body">No explanation will be saved with this approval.</p>
+            )}
             <div className="pcr-decision__actions">
               <button
                 type="button"

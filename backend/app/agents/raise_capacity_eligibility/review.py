@@ -33,14 +33,22 @@ def _run_view(run: dict | None) -> dict | None:
         "model": run["model"],
         "agent_version": run["agent_version"],
         "error_message": run["error_message"],
+        # Only for a REJECT evaluated by agent 2.0.0 or later (null otherwise).
+        "rejection_explanation": run.get("rejection_explanation"),
+        "rejection_model": run.get("rejection_model"),
     }
 
 
 def _relevant_course_ids(request: dict, current: dict | None) -> list[str]:
-    """The requested course plus every course named in its prerequisite groups."""
+    """The requested course plus every course its requirement names (text IDs,
+    leading zeros preserved). Runs before agent 2.0.0 stored integer groups."""
     ids = {str(request["Course_ID"])}
-    if current and current.get("evidence"):
-        groups = current["evidence"].get("checks", {}).get("prerequisite", {}).get("required_prerequisite_groups") or []
+    evidence = (current or {}).get("evidence") or {}
+    requirement = evidence.get("academic_requirement")
+    if requirement:
+        ids.update(leaf["course_id"] for leaf in requirement.get("leaf_evaluations", []) if leaf.get("course_id"))
+    else:
+        groups = evidence.get("checks", {}).get("prerequisite", {}).get("required_prerequisite_groups") or []
         ids.update(str(cid) for group in groups for cid in group)
     return sorted(ids)
 

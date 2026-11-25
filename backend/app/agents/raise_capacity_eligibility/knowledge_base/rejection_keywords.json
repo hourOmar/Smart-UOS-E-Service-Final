@@ -1,0 +1,63 @@
+{
+  "note": "Closed vocabulary of Raise Capacity rejection keywords for the Rejection Explanation Agent. Every keyword is detected by Python ONLY from a confirmed failure of a complete applicable requirement in the eligibility evidence (academic_requirement.confirmed_failures, or checks.capacity.status NOT_SATISFIED). Unresolved, conflicting or unevaluated evidence never maps to a keyword, and one failed alternative of a requirement that is satisfied or unresolved is never a failure. Gemini can only reference these ids. Placeholders are filled from the verified evidence only. 'topic_terms' are used to drop explanations that discuss a requirement that did not fail.",
+  "keywords": {
+    "prerequisite_not_completed": {
+      "requirement": "prerequisite",
+      "label": "Prerequisite course not completed",
+      "policy_basis": "The course's prerequisite course must be completed with a passing grade in a term before the requested term.",
+      "plain_reason": "There is no record of you completing the required prerequisite course(s) {course_list} in an earlier term.",
+      "concise_reason": "prerequisite course(s) {course_list} not completed",
+      "supportive_guidance": "Completing {course_list} with a passing grade would meet this requirement."
+    },
+    "prerequisite_not_passed": {
+      "requirement": "prerequisite",
+      "label": "Prerequisite course not passed",
+      "policy_basis": "A prerequisite course counts only when a passing grade under the approved grade policy is recorded in a term before the requested term.",
+      "plain_reason": "No passing grade is recorded for the required prerequisite course(s) {course_list}; the recorded grade(s) ({grades}) do not meet the passing requirement.",
+      "concise_reason": "no passing grade recorded for prerequisite course(s) {course_list}",
+      "supportive_guidance": "A passing grade in {course_list} would meet this requirement."
+    },
+    "prerequisite_options_not_satisfied": {
+      "requirement": "prerequisite",
+      "label": "No prerequisite option satisfied",
+      "policy_basis": "The course's requirement lists alternative options; meeting any one of them satisfies it.",
+      "plain_reason": "This course requires one of the following: {options}. None of these options has been met.",
+      "concise_reason": "none of the required options met ({options})",
+      "supportive_guidance": "Meeting any one of these options would satisfy this requirement."
+    },
+    "corequisite_not_satisfied": {
+      "requirement": "prerequisite",
+      "label": "Co-requisite not satisfied",
+      "policy_basis": "A co-requisite course must be completed in an earlier term or taken in the same term as the requested course.",
+      "plain_reason": "The course(s) {course_list} must be completed in an earlier term or taken in the same term as this course, and no such record was found.",
+      "concise_reason": "co-requisite course(s) {course_list} neither completed nor taken in the same term",
+      "supportive_guidance": "Completing {course_list} or taking it in the same term would meet this requirement."
+    },
+    "academic_standing_not_satisfied": {
+      "requirement": "standing",
+      "label": "Academic standing not met",
+      "policy_basis": "The course requires an academic standing, measured by completed credit hours against the approved standing threshold.",
+      "plain_reason": "This course requires {standing}, which needs at least {required_credits} completed credit hours; you have completed {completed_hours} credit hours.",
+      "concise_reason": "{standing} not met ({completed_hours} of the required {required_credits} completed credit hours)",
+      "supportive_guidance": "Reaching at least {required_credits} completed credit hours would meet this requirement."
+    },
+    "no_remaining_capacity": {
+      "requirement": "capacity",
+      "label": "No remaining section capacity",
+      "policy_basis": "A Raise Capacity request can only be accommodated while the section's current capacity is below its maximum allowed capacity (total plus additional capacity).",
+      "plain_reason": "Section {section_id} has reached its maximum allowed capacity ({current_capacity} of {maximum_allowed_capacity}), so no additional seat remains.",
+      "concise_reason": "Section {section_id} is at its maximum allowed capacity of {maximum_allowed_capacity}",
+      "supportive_guidance": ""
+    }
+  },
+  "topic_terms": {
+    "prerequisite": ["prerequisite", "pre-requisite", "co-requisite", "corequisite"],
+    "standing": ["standing", "credit hour", "credit-hour", "completed hours"],
+    "capacity": ["capacity", "seat"]
+  },
+  "templates": {
+    "formal": "Your Raise Capacity request for {course_id} ({course_name}), Section {section_id}, cannot be approved because it does not meet the following requirement(s). {plain_reasons}",
+    "concise": "Requirement(s) not met for {course_id}: {concise_reasons}.",
+    "supportive": "Thank you for your Raise Capacity request for {course_name}. At this time it does not meet the following requirement(s). {plain_reasons} {supportive_guidance}"
+  }
+}

@@ -13,7 +13,9 @@ FAKE_KEY = "AIzaSyFAKE-test-key-0123456789abcdefghij"
 EVIDENCE = {
     "request_id": "STUD_RSCA_RSCA_000001",
     "student": {"Student_ID": "U21100001", "Student_Name": "Zaynab Distinctname"},
-    "checks": {"prerequisite": {}, "completed_hours": {}, "capacity": {}},
+    "program_scope": {"status": "SUPPORTED"},
+    "academic_requirement": {"status": "SATISFIED"},
+    "checks": {"prerequisite": {}, "completed_hours": {}, "capacity": {"status": "SATISFIED"}},
 }
 
 
@@ -63,14 +65,15 @@ def test_server_error_is_stored_and_logged_with_status_and_cause_only(with_key, 
     exc = server_error(f"The model is overloaded. key={FAKE_KEY} for U21100001")
     monkeypatch.setattr(gemini, "get_client", lambda: FakeClient(exc))
     with caplog.at_level(logging.WARNING, logger="app.core.gemini"):
-        result = decision.get_decision(EVIDENCE)
+        # A technical failure is raised (the run fails); no recommendation is produced.
+        with pytest.raises(gemini.GeminiUnavailableError) as raised:
+            decision.get_decision(EVIDENCE)
 
-    stored = result["error"]
-    assert result["status"] == "unavailable" and result["recommendation"] == "MANUAL_REVIEW"
+    stored = str(raised.value)
     assert stored.startswith("Gemini request failed: ServerError 503 UNAVAILABLE: The model is overloaded.")
     logged = caplog.text
     assert "503 UNAVAILABLE" in logged and "request STUD_RSCA_RSCA_000001" in logged and "model=" in logged
-    for leaked in (FAKE_KEY, "U21100001", "Distinctname", "Verified evidence", "DECISION RULES"):
+    for leaked in (FAKE_KEY, "U21100001", "Distinctname", "=== EVIDENCE", "HOW TO DECIDE"):
         assert leaked not in stored and leaked not in logged
 
 

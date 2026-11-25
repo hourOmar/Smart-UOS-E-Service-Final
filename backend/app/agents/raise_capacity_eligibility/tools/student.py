@@ -7,7 +7,7 @@ from ..exceptions import StudentNotFoundError
 def get_student_academic_info(conn: Connection, student_id: str) -> dict:
     row = conn.execute(
         text(
-            'SELECT "Student_ID", "Student_Name", "CGPA", "Completed_Hours", "Program_ID" '
+            'SELECT "Student_ID", "Student_Name", "CGPA", "Completed_Hours", "Program_ID", "Program_Name" '
             'FROM public."Student" WHERE "Student_ID" = :sid'
         ),
         {"sid": student_id},

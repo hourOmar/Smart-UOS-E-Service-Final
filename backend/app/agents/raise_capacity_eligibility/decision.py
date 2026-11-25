@@ -1,20 +1,66 @@
-"""Gemini is the decision-making layer (unchanged architecture).
+"""
+Gemini is the decision-making layer. Python collects and verifies the
+evidence; Gemini applies the eligibility policy (knowledge_base/
+eligibility_policy.json) to it and returns APPROVE / REJECT / MANUAL_REVIEW
+with an explanation per check.
 
-Python collects and computes verified evidence; Gemini applies the explicit decision
-rules below and returns APPROVE / REJECT / MANUAL_REVIEW with explanations. It may
-not invent facts, recompute capacity, query the database or browse. If Gemini is
-unavailable there is no deterministic fallback recommendation: the result is
-MANUAL_REVIEW with the collected evidence.
+Reply handling:
+- The reply must match EligibilityDecision (non-empty reasoning and check
+  explanations; one of the three recommendations).
+- Its recommendation must be the one the policy permits for the verified
+  evidence (policy.permitted_recommendation). A reply that cannot be parsed,
+  or that contradicts the policy, is invalid and is asked for again, up to
+  MAX_ATTEMPTS times. Every attempt goes through app.core.gemini, with the
+  configured fallback models after a temporary 429/503 error.
+- When every attempt fails, or Gemini cannot be reached, an error is raised and
+  the run is recorded as FAILED. Python never produces, replaces or invents a
+  recommendation.
 
-The student's identity (ID and name) is removed from what Gemini receives; it is not
-needed to apply the rules.
+The student's identity (ID and name) is removed from what Gemini receives.
 """
 
 import json
 
-from app.core.gemini import GeminiUnavailableError, generate_structured, model_name
+from app.core.gemini import GeminiUnavailableError, fallback_model_names, generate_structured_with_model
 
+from .exceptions import EligibilityReplyInvalidError
+from .policy import ELIGIBILITY_POLICY, permitted_recommendation
 from .schemas import EligibilityDecision
+
+MAX_ATTEMPTS = 3
+_UNPARSABLE = "Gemini's structured response could not be parsed"
+
+SYSTEM_INSTRUCTION = """You are the Academic Eligibility Evaluation Agent for University of Sharjah Raise Capacity requests.
+
+YOUR ROLE
+Recommend APPROVE, REJECT or MANUAL_REVIEW for one request by applying the POLICY below to the EVIDENCE below, and explain the recommendation. The recommendation is advisory: the administrator makes the final decision. You do not retrieve data, call any tool, database or website, or access anything beyond what is given below.
+
+THE EVIDENCE IS VERIFIED
+Python has already collected and evaluated every fact: the student's transcript against the validated prerequisite knowledge and the approved grade policy, the student's completed credit hours against the knowledge file's academic standing thresholds, and the section's capacity. Every status in the EVIDENCE is authoritative. Do not recompute, re-derive or second-guess any status, number or grade.
+
+HOW TO DECIDE
+- Apply POLICY.rules exactly, using academic_requirement.status, checks.capacity.status and program_scope.status. Use no other rule.
+- Program scope comes first: if program_scope.status is UNSUPPORTED_PROGRAM or MISSING_PROGRAM, recommend MANUAL_REVIEW and explain that the student's program is outside the supported scope (or is not recorded) and that no program-specific requirement was applied — even when the section is full.
+- REJECT requires a CONFIRMED failure: academic_requirement.status NOT_SATISFIED, or checks.capacity.status NOT_SATISFIED. A confirmed failure establishes REJECT even when another check is unresolved.
+- APPROVE requires academic_requirement.status SATISFIED and checks.capacity.status SATISFIED.
+- Otherwise MANUAL_REVIEW. Missing, unresolved, conflicting or unverifiable evidence is never a failure and never justifies REJECT.
+
+THE REQUIREMENT IS EVALUATED AS A WHOLE
+academic_requirement is the course's complete requirement: prerequisite courses and academic standing combined in one nested AND/OR requirement. checks.prerequisite shows its course conditions and checks.completed_hours its academic standing conditions; both share academic_requirement.status. One failed alternative of an OR requirement is NOT a failure when another alternative satisfies the requirement or is unresolved: only academic_requirement.confirmed_failures are confirmed failures. Do not reinterpret requirement_expression, and do not apply any requirement that is not in the EVIDENCE.
+
+ANTI-HALLUCINATION RULES (follow strictly)
+- Use ONLY the POLICY and EVIDENCE below. Do not use outside knowledge about the University of Sharjah, its courses or its students.
+- Do not invent academic policies, prerequisites, standing thresholds, student records, grades, credit hours or capacity figures.
+- Do not assume a value for anything the EVIDENCE marks as missing, null or unresolved: say that it is unavailable.
+- Cite the actual course IDs, grades, statuses and numbers given.
+
+OUTPUT
+- recommendation: APPROVE, REJECT or MANUAL_REVIEW, exactly as the POLICY rules give.
+- reasoning: 3-5 sentences explaining the recommendation and the rule(s) it follows.
+- checks.prerequisite: the course conditions and their statuses (course IDs, grades, terms where relevant), or that the course has no prerequisite course, or that it was not evaluated.
+- checks.completed_hours: the academic standing conditions — the student's completed credit hours against the required threshold — or that the requirement includes no academic standing condition, or that it was not evaluated.
+- checks.capacity: the current, total, additional, maximum and remaining capacity figures and whether a seat remains, or why the capacity could not be confirmed.
+Every field must be non-empty. Respond only with the structured JSON object."""
 
 
 def gemini_evidence(evidence_package: dict) -> dict:
@@ -23,101 +69,55 @@ def gemini_evidence(evidence_package: dict) -> dict:
 
 
 def build_prompt(evidence_package: dict) -> str:
-    evidence_json = json.dumps(gemini_evidence(evidence_package), indent=2, default=str)
-    return f"""You are the Academic Eligibility Evaluation Agent for University of Sharjah
-Raise Capacity requests. You decide the final recommendation -- APPROVE, REJECT, or
-MANUAL_REVIEW -- by applying the decision rules below to the verified evidence provided.
+    return (
+        "=== POLICY (the approved eligibility policy; do not alter or contradict) ===\n"
+        f"{json.dumps(ELIGIBILITY_POLICY, indent=2)}\n\n"
+        "=== EVIDENCE (verified facts about this request; the only facts you may use) ===\n"
+        f"{json.dumps(gemini_evidence(evidence_package), indent=2, default=str)}\n\n"
+        "Using ONLY the POLICY and EVIDENCE above, produce the structured eligibility recommendation."
+    )
 
-All evidence below was ALREADY collected and computed deterministically in Python from
-verified sources: the official University of Sharjah website (prerequisite), the student's
-transcript and the approved grade policy (prerequisite satisfaction), the local
-completed-hours knowledge base, and the Section table (capacity). Do NOT recompute,
-re-derive, or second-guess any of these values -- especially the capacity numbers, which
-are already final. Do NOT invent any prerequisite, grade, threshold, or capacity number
-that is not present in the evidence below. Do NOT query any database or browse the web --
-everything you need is in the evidence below.
 
-DECISION RULES (apply exactly; use no other rule):
-
-APPROVE requires ALL of:
-- checks.prerequisite.verified is true AND checks.prerequisite.satisfied is true
-- the completed-hours requirement is satisfied WHENEVER it applies -- if
-  checks.completed_hours.applicable is false, this condition is automatically met (no rule
-  is configured for this course, which is not a failure)
-- checks.capacity.satisfied is true (additional section capacity is available)
-
-REJECT applies when ANY of:
-- checks.prerequisite.verified is true AND checks.prerequisite.satisfied is false (a
-  CONFIRMED, verified failure -- not merely unresolved)
-- checks.completed_hours.applicable is true AND checks.completed_hours.satisfied is false
-- checks.capacity.satisfied is false (no additional capacity remains)
-
-MANUAL_REVIEW applies whenever neither APPROVE nor REJECT can be conclusively determined,
-for example:
-- checks.prerequisite.verified is false (could not be verified from the UoS source)
-- checks.prerequisite.satisfied is null (unresolved -- e.g. a grade value outside the
-  approved policy, or a text-only condition with no course ID)
-- checks.completed_hours.applicable is true AND checks.completed_hours.satisfied is null
-  (the student's completed hours are not recorded, so the rule cannot be verified)
-- any other required input is missing or ambiguous
-
-CRITICAL RULE: missing or unverifiable evidence is NEVER the same as a failed requirement.
-It must lead to MANUAL_REVIEW, never REJECT. REJECT requires a CONFIRMED, verified failure.
-
-Verified evidence:
-{evidence_json}
-
-Produce the structured response:
-- recommendation: APPROVE, REJECT, or MANUAL_REVIEW, decided strictly by the rules above.
-- reasoning: 3-5 sentences explaining the overall decision and which rule(s) it followed.
-- checks.prerequisite: explain the prerequisite outcome, citing the specific evidence
-  (course IDs, verification/satisfaction status, grades where relevant) that produced it.
-  If additional_text_conditions is non-empty, mention it separately as a condition that
-  exists but was not itself evaluated. If the prerequisite could not be verified because
-  the course is not on the source page, say that only Computer Science degree-page
-  courses can be verified (see checks.prerequisite.source_scope).
-- checks.completed_hours: if applicable is false, clearly state that no completed-hours
-  rule is configured for this course (not a failure). If applicable, cite the student's
-  completed hours against the required hours, or state that they are not recorded.
-- checks.capacity: cite the actual current/total/additional/maximum/remaining capacity
-  numbers and state whether additional space remains."""
+def reply_problems(decision: EligibilityDecision, permitted: str) -> list[str]:
+    problems = []
+    if decision.recommendation != permitted:
+        problems.append(f"recommendation {decision.recommendation} contradicts the policy for this evidence")
+    texts = {"reasoning": decision.reasoning, **decision.checks.model_dump()}
+    problems.extend(f"{name} is empty" for name, value in texts.items() if not value.strip())
+    return problems
 
 
 def get_decision(evidence_package: dict) -> dict:
-    model = model_name()
-    try:
-        parsed = generate_structured(
-            build_prompt(evidence_package), EligibilityDecision, model=model,
-            context=f"request {evidence_package.get('request_id')}",
-        )
-    except GeminiUnavailableError as exc:
-        return unavailable_result(evidence_package, str(exc), model)
-    return {
-        "status": "ok",
-        "model": model,
-        "recommendation": parsed.recommendation,
-        "reasoning": parsed.reasoning,
-        "checks": parsed.checks.model_dump(),
-        "error": None,
-    }
-
-
-def unavailable_result(evidence_package: dict, error: str, model: str) -> dict:
-    """No deterministic fallback recommendation: MANUAL_REVIEW with the evidence."""
-    checks = evidence_package.get("checks", {})
-    return {
-        "status": "unavailable",
-        "model": model,
-        "recommendation": "MANUAL_REVIEW",
-        "reasoning": (
-            "Gemini (the decision-making layer) was unavailable, so no automated recommendation "
-            f"could be produced: {error}. Verified evidence was collected and is available for "
-            "manual review."
-        ),
-        "checks": {
-            "prerequisite": f"Not reviewed by Gemini. Evidence collected: {checks.get('prerequisite')}",
-            "completed_hours": f"Not reviewed by Gemini. Evidence collected: {checks.get('completed_hours')}",
-            "capacity": f"Not reviewed by Gemini. Evidence collected: {checks.get('capacity')}",
-        },
-        "error": error,
-    }
+    """The validated decision and the model that produced it. Raises
+    GeminiUnavailableError (unreachable) or EligibilityReplyInvalidError
+    (every reply invalid); the caller records a failed run."""
+    permitted = permitted_recommendation(evidence_package)
+    prompt = build_prompt(evidence_package)
+    context = f"request {evidence_package.get('request_id')}"
+    rejected: list[str] = []
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            parsed, model = generate_structured_with_model(
+                prompt, EligibilityDecision, system_instruction=SYSTEM_INSTRUCTION,
+                fallback_models=fallback_model_names(), context=context,
+            )
+        except GeminiUnavailableError as exc:
+            if not str(exc).startswith(_UNPARSABLE):
+                raise
+            rejected.append(f"attempt {attempt}: the reply could not be parsed")
+            continue
+        problems = reply_problems(parsed, permitted)
+        if not problems:
+            return {
+                "status": "ok",
+                "model": model,
+                "recommendation": parsed.recommendation,
+                "reasoning": parsed.reasoning,
+                "checks": parsed.checks.model_dump(),
+                "attempts": attempt,
+            }
+        rejected.append(f"attempt {attempt}: " + "; ".join(problems))
+    raise EligibilityReplyInvalidError(
+        f"Gemini did not return a valid eligibility recommendation in {MAX_ATTEMPTS} attempts ("
+        + " | ".join(rejected) + ")."
+    )

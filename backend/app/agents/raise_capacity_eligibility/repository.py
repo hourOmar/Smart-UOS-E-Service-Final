@@ -78,25 +78,36 @@ def _json(value) -> str:
 
 
 def complete_run(conn: Connection, run_id: int, result: dict) -> bool:
-    """False when the run is no longer 'running' (e.g. already expired as interrupted)."""
+    """False when the run is no longer 'running' (e.g. already expired as interrupted).
+
+    The rejection explanation (and the model that wrote it) is stored only for a
+    REJECT, in columns added by database/maintenance/raise-capacity-eligibility-
+    rejection/01_install_storage.sql; other results never reference them."""
+    params = {
+        "id": run_id,
+        "recommendation": result["recommendation"],
+        "reasoning": result["reasoning"],
+        "checks": _json(result["checks"]),
+        "evidence": _json(result["evidence"]),
+        "gemini_status": result["gemini_status"],
+        "gemini_error": result["gemini_error"],
+        "model": result["model"],
+    }
+    rejection_columns = ""
+    if result.get("rejection_explanation") is not None:
+        rejection_columns = (", rejection_explanation = CAST(:rejection_explanation AS jsonb), "
+                             "rejection_model = :rejection_model")
+        params["rejection_explanation"] = _json(result["rejection_explanation"])
+        params["rejection_model"] = result.get("rejection_model")
     updated = conn.execute(
         text(
             f"UPDATE {TABLE} SET run_status = 'completed', finished_at = now(), "
             "recommendation = :recommendation, reasoning = :reasoning, "
             "check_explanations = CAST(:checks AS jsonb), evidence = CAST(:evidence AS jsonb), "
-            "gemini_status = :gemini_status, gemini_error = :gemini_error, model = :model "
-            "WHERE id = :id AND run_status = 'running'"
+            "gemini_status = :gemini_status, gemini_error = :gemini_error, model = :model"
+            f"{rejection_columns} WHERE id = :id AND run_status = 'running'"
         ),
-        {
-            "id": run_id,
-            "recommendation": result["recommendation"],
-            "reasoning": result["reasoning"],
-            "checks": _json(result["checks"]),
-            "evidence": _json(result["evidence"]),
-            "gemini_status": result["gemini_status"],
-            "gemini_error": result["gemini_error"],
-            "model": result["model"],
-        },
+        params,
     )
     return updated.rowcount == 1
 
@@ -113,11 +124,15 @@ def fail_run(conn: Connection, run_id: int, error_message: str) -> bool:
 
 
 def list_runs(conn: Connection, request_id: str) -> list[dict]:
-    """Newest first, with `interrupted` marking a running row past the timeout."""
+    """Newest first, with `interrupted` marking a running row past the timeout.
+    The rejection columns are read through to_jsonb(row), so the list also works
+    before the rejection storage migration is installed (they are then null)."""
     rows = conn.execute(
         text(
             f"SELECT {_COLUMNS}, (run_status = 'running' AND started_at < now() - make_interval(secs => :secs)) "
-            f"AS interrupted FROM {TABLE} WHERE request_id = :rid ORDER BY started_at DESC, id DESC"
+            "AS interrupted, to_jsonb(r) -> 'rejection_explanation' AS rejection_explanation, "
+            "to_jsonb(r) ->> 'rejection_model' AS rejection_model "
+            f"FROM {TABLE} r WHERE request_id = :rid ORDER BY started_at DESC, id DESC"
         ),
         {"rid": request_id, "secs": RUN_TIMEOUT.total_seconds()},
     ).mappings().all()

@@ -43,12 +43,20 @@ All recommendations are **advisory**. No agent approves, rejects or changes a re
 
 ### Raise Capacity Academic Eligibility Evaluation Agent (`raise_capacity_eligibility/`)
 
-Evidence: the request, the student's transcript, course capacity, completed hours, grade policy
-and prerequisites (from the UoS Computer Science degree page, cached for one hour). Gemini
-decides `APPROVE` / `REJECT` / `MANUAL_REVIEW` from the verified evidence; missing evidence is
-never a rejection. The student's ID and name are not sent to Gemini. Runs once on the first
-opening of a request that was never evaluated, then on "Re-run". Stored in
-`agents.raise_capacity_evaluation`.
+Evidence: the request, the student (program, completed hours), the transcript and the section,
+read in one read-only transaction, and the agent's own validated knowledge files in
+`knowledge_base/` (prerequisites, grade policy, eligibility policy, rejection keywords) — no web
+page is read. Three checks: prerequisites and academic standing, evaluated together as the
+course's complete requirement with the evaluator copied from the Prioritization agent (both
+agents evaluate prerequisites identically), and section capacity. Students outside the supported
+program (Computer Science, 1501) get `MANUAL_REVIEW`. Gemini recommends `APPROVE` / `REJECT` /
+`MANUAL_REVIEW`; a reply that contradicts the policy for the verified evidence is retried, and a
+technical failure is a failed run (never a Python recommendation); missing evidence is never a
+rejection. After a REJECT, the Rejection Explanation Agent suggests three validated reasons
+(formal, concise, supportive) that the administrator can use and edit. The student's ID and name
+are not sent to Gemini. Runs once on the first opening of a request that was never evaluated, then
+on "Re-run". Stored in `agents.raise_capacity_evaluation` (rejection explanations need
+`database/maintenance/raise-capacity-eligibility-rejection/01_install_storage.sql`).
 
 ### Raise Capacity Prioritization Agent (`raise_capacity_priority/`)
 
@@ -217,8 +225,9 @@ All tests run offline with fakes for the database, Storage and Gemini.
 - Incomplete Exam is limited to final exams only by the student form; the agents and the
   database functions do not enforce it.
 - The AI reads proof documents but does not verify their authenticity.
-- Raise Capacity Eligibility verifies prerequisites only from the UoS Computer Science degree page;
-  other courses are reported as unverified (`MANUAL_REVIEW`).
+- Raise Capacity Eligibility uses the same validated Computer Science (1501) knowledge as the
+  Prioritization agent; students in other programs, and courses missing from the knowledge, get
+  `MANUAL_REVIEW`.
 - The Raise Capacity Prioritization agent's knowledge files cover the Computer Science program
   (1501) only; for other programs it is instructed to recommend `MANUAL_REVIEW`.
 - Another team backend that connects as `postgres` can still overwrite the Raise Capacity

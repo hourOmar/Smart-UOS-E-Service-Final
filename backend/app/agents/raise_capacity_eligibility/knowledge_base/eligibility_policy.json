@@ -1,0 +1,30 @@
+{
+  "policy_version": "2.0",
+  "scope": "Raise Capacity academic eligibility for the program named in course_prerequisites.json (program_id 1501, Computer Science).",
+  "recommendations": {
+    "APPROVE": "All applicable academic requirements are satisfied, section capacity is available, and no required evidence remains unresolved.",
+    "REJECT": "At least one complete applicable eligibility requirement has a confirmed failure. A confirmed failure establishes rejection even when another independent check is unresolved.",
+    "MANUAL_REVIEW": "No confirmed failure establishes rejection, but required evidence is missing, unresolved, conflicting or unverifiable."
+  },
+  "requirements": [
+    {
+      "id": "academic_requirement",
+      "name": "Prerequisites and academic standing",
+      "description": "The requested course's complete requirement from the validated prerequisite knowledge: prerequisite courses (PRE: completed with a passing grade in an earlier term; PRE_OR_CO: completed earlier or taken in the requested term; CO: taken in the requested term) and academic standing (Student.Completed_Hours against the knowledge file's standing thresholds), combined in one nested AND/OR requirement. Its result is academic_requirement.status; checks.prerequisite and checks.completed_hours show its course and standing conditions."
+    },
+    {
+      "id": "capacity",
+      "name": "Section capacity",
+      "description": "A seat remains while Current_Capacity is below Total_Capacity + Additional_Capacity (the same rule the database enforces when an approval is saved). Its result is checks.capacity.status."
+    }
+  ],
+  "rules": [
+    "Program scope takes precedence over every other rule: when program_scope.status is UNSUPPORTED_PROGRAM or MISSING_PROGRAM the recommendation is MANUAL_REVIEW, even when the section is full; no program-specific requirement is applied.",
+    "REJECT when academic_requirement.status is NOT_SATISFIED or checks.capacity.status is NOT_SATISFIED.",
+    "APPROVE when academic_requirement.status is SATISFIED and checks.capacity.status is SATISFIED.",
+    "MANUAL_REVIEW in every other case: academic_requirement.status UNRESOLVED or CONFLICT, or checks.capacity.status UNRESOLVED, with no confirmed failure.",
+    "Missing evidence alone never justifies rejection.",
+    "The complete requirement decides: one failed alternative of an OR requirement is not a failure when another alternative satisfies the requirement or is unresolved."
+  ],
+  "grade_policy": "Passing grades are those in grade_policy.json (A, B+, B, C+, C, D+, D). F, WF and FA are failing. W, I, a NULL grade in an earlier term and any unrecognised grade are unresolved. A record in the requested term is current enrolment. Records after the requested term are ignored."
+}

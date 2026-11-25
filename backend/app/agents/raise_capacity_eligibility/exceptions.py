@@ -26,10 +26,7 @@ class SectionCourseMismatchError(AgentError):
     pass
 
 
-class KnowledgeBaseError(AgentError):
-    pass
-
-
-class PrerequisiteSourceUnavailableError(AgentError):
-    """The UoS page could not be fetched or parsed. Converted into verified=False
-    evidence, never allowed to abort the evaluation."""
+class EligibilityReplyInvalidError(AgentError):
+    """Every Gemini reply was unusable (unparsable, or its recommendation
+    contradicted the policy for the verified evidence). The run fails; no
+    recommendation is produced."""

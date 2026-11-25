@@ -2,6 +2,7 @@ import type { EvaluationRun, EvaluationState, Recommendation } from '../../servi
 import { formatDateTime } from './format'
 import EligibilityChecks from './EligibilityChecks'
 import { savedText } from '../../utils/raiseCapacityExplanations'
+import { rejectionSuggestions } from '../../utils/raiseCapacityEvaluation'
 
 const RECOMMENDATIONS: Record<Recommendation, { tone: string; glyph: string; label: string }> = {
   APPROVE: { tone: 'approve', glyph: '✓', label: 'APPROVE' },
@@ -21,6 +22,57 @@ interface EligibilityPanelProps {
   finalized: boolean
   /** Names of the prerequisite courses, for the check cards. */
   courseNames: Map<string, string>
+  /** Selects Reject and fills the editable explanation (never submits); null when no decision can be made now. */
+  onUseReason?: ((text: string) => void) | null
+}
+
+// The Rejection Explanation Agent's three suggestions (formal, concise,
+// supportive), shown only for a successful REJECT evaluation. "Use this
+// reason" selects Reject and fills the explanation, which stays editable; the
+// administrator submits the decision. Same design as the Incomplete Exam page.
+function Suggestions({ run, onUseReason }: { run: EvaluationRun; onUseReason: ((text: string) => void) | null }) {
+  const suggestions = rejectionSuggestions(run)
+  if (!suggestions) return null
+  return (
+    <div className="rca-suggest" aria-labelledby="rca-suggest-title">
+      <div className="rca-suggest__head">
+        <span id="rca-suggest-title" className="pcr-column__label">
+          Suggested explanations to the student
+        </span>
+      </div>
+      {suggestions.verifiedReasons.length > 0 && (
+        <p className="rca-suggest__basis">
+          <strong>Verified reasons:</strong> {suggestions.verifiedReasons.join('; ')}
+        </p>
+      )}
+      {suggestions.conflictNote && (
+        <p className="pcr-warning" role="note">
+          <span aria-hidden="true">! </span>
+          {suggestions.conflictNote}
+        </p>
+      )}
+      {suggestions.message && <p className="rv-muted">{suggestions.message}</p>}
+      {suggestions.reasons.length > 0 && (
+        <ul className="rca-suggest__list">
+          {suggestions.reasons.map((reason) => (
+            <li key={reason.tone} className="rca-suggest__item">
+              <span className="rca-suggest__tone">{reason.label}</span>
+              <p className="rca-suggest__text">{reason.text}</p>
+              {onUseReason && (
+                <button type="button" className="pcr-rerun" onClick={() => onUseReason(reason.text)}>
+                  Use this reason
+                  <span className="student-visually-hidden"> ({reason.label})</span>
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!onUseReason && suggestions.reasons.length > 0 && (
+        <span className="rv-muted">Suggestions can be used only while the request is awaiting a decision.</span>
+      )}
+    </div>
+  )
 }
 
 // When the evaluation ran: its evidence is a snapshot from that time, not current records.
@@ -48,7 +100,11 @@ function NoAutomatedDecision() {
   )
 }
 
-function Result({ run, courseNames }: { run: EvaluationRun; courseNames: Map<string, string> }) {
+function Result({ run, courseNames, onUseReason }: {
+  run: EvaluationRun
+  courseNames: Map<string, string>
+  onUseReason: ((text: string) => void) | null
+}) {
   const decided = run.gemini_status === 'ok' && run.recommendation
   const rec = decided ? RECOMMENDATIONS[run.recommendation!] : null
   // Two columns, as on the Course Equivalency review: the recommendation on the
@@ -77,6 +133,9 @@ function Result({ run, courseNames }: { run: EvaluationRun; courseNames: Map<str
         <span className="pcr-column__label">Eligibility checks</span>
         {run.evidence?.checks && <Snapshot run={run} />}
         <EligibilityChecks run={run} names={courseNames} />
+      </div>
+      <div className="rca-suggest-row">
+        <Suggestions run={run} onUseReason={onUseReason} />
       </div>
     </div>
   )
@@ -114,7 +173,9 @@ function LatestAttempt({ run, hasCurrent }: { run: EvaluationRun; hasCurrent: bo
 // The Eligibility Agent's part of the AI Agent Evaluation: recommendation, reasoning and the
 // three academic checks (each with its evidence and the agent's explanation). The check can be
 // re-run here, as before.
-function EligibilityPanel({ status, data, error, running, notice, onRerun, onRetry, finalized, courseNames }: EligibilityPanelProps) {
+function EligibilityPanel({
+  status, data, error, running, notice, onRerun, onRetry, finalized, courseNames, onUseReason = null,
+}: EligibilityPanelProps) {
   const active = running || Boolean(data?.in_progress)
   const current = data?.current ?? null
   const attempt = data?.latest_attempt ?? null
@@ -159,7 +220,7 @@ function EligibilityPanel({ status, data, error, running, notice, onRerun, onRet
         </p>
       )}
 
-      {current && <Result run={current} courseNames={courseNames} />}
+      {current && <Result run={current} courseNames={courseNames} onUseReason={onUseReason} />}
       {attempt && <LatestAttempt run={attempt} hasCurrent={Boolean(current)} />}
 
       {status === 'ready' && data && !current && !attempt && !active && (

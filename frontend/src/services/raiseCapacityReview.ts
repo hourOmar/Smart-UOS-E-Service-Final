@@ -231,7 +231,8 @@ export async function fetchReviewRecord(requestId: string): Promise<RecordResult
 const DECISION_MESSAGES: Record<string, string> = {
   not_staff: 'Only staff members linked in Authorized_Staff can decide requests.',
   invalid_decision: 'Choose Approve or Reject.',
-  explanation_required: 'Enter an explanation for the decision.',
+  explanation_required:
+    'Enter an explanation. A rejection always needs one; an approval without one also needs the latest database update.',
   explanation_too_long: 'The explanation can be at most 2,000 characters.',
   request_not_found: 'This request no longer exists.',
   not_raise_capacity: 'Only Raise Capacity requests can be decided here.',
@@ -310,6 +311,58 @@ export interface EvaluationRun {
   model: string | null
   agent_version: string | null
   error_message: string | null
+  /** Agent 2.0.0+: the Rejection Explanation Agent's suggestions, only for a REJECT. */
+  rejection_explanation?: RejectionExplanation | null
+  rejection_model?: string | null
+}
+
+export type SuggestionTone = 'formal' | 'concise' | 'supportive'
+
+export interface RejectionKeyword {
+  keyword: string
+  requirement: string
+  label: string
+  policy_basis: string
+  plain_reason: string
+}
+
+export interface RejectionExplanation {
+  status: 'ok' | 'partial_fallback' | 'fallback' | 'needs_manual_explanation' | 'unavailable'
+  keywords: RejectionKeyword[]
+  suggested_reasons: { tone: SuggestionTone; text: string; addresses_keywords: string[]; source: 'gemini' | 'template' }[]
+  conflict_note: string
+}
+
+/** Agent 2.0.0+: one evaluated condition of the course's complete requirement. */
+export interface RequirementCondition {
+  kind: 'COURSE' | 'STANDING'
+  course_id: string | null
+  mode: 'PRE' | 'CO' | 'PRE_OR_CO' | null
+  standing_text: string | null
+  required_earned_credits: number | null
+  completed_hours: number | null
+  status: 'SATISFIED' | 'NOT_SATISFIED' | 'UNRESOLVED'
+  reason: string
+}
+
+export type CheckStatus = 'SATISFIED' | 'NOT_SATISFIED' | 'UNRESOLVED' | 'CONFLICT' | 'NOT_APPLICABLE' | 'NOT_EVALUATED'
+
+/** Agent 2.0.0+ prerequisite card evidence (course conditions of the complete requirement). */
+export interface PrerequisiteCheckV2 {
+  status: CheckStatus
+  requirement_status: string
+  knowledge_status: string
+  course_conditions: RequirementCondition[]
+  details: string | null
+}
+
+/** Agent 2.0.0+ academic standing card evidence (standing conditions of the complete requirement). */
+export interface StandingCheckV2 {
+  status: CheckStatus
+  requirement_status: string
+  student_completed_hours: number | null
+  standing_conditions: RequirementCondition[]
+  details: string | null
 }
 
 export interface EvaluationEvidence {
@@ -317,6 +370,10 @@ export interface EvaluationEvidence {
   course?: { Course_ID: string; Course_Name: string | null }
   section_id?: string
   term?: number
+  /** Agent 2.0.0+ only. */
+  program_scope?: { program_id: string | null; status: string; supported_program_id: string; note: string | null }
+  /** Agent 2.0.0+ only: the course's complete requirement (prerequisites and standing together). */
+  academic_requirement?: { status: string; knowledge_status: string; reason: string }
   checks: {
     prerequisite: {
       raw_prerequisite_text: string | null
@@ -344,12 +401,15 @@ export interface EvaluationEvidence {
       details?: string
     }
     capacity: {
-      current_capacity: number
-      total_capacity: number
-      additional_capacity: number
-      maximum_allowed_capacity: number
-      remaining_raise_capacity: number
-      satisfied: boolean
+      current_capacity: number | null
+      total_capacity: number | null
+      additional_capacity: number | null
+      maximum_allowed_capacity: number | null
+      remaining_raise_capacity: number | null
+      satisfied: boolean | null
+      /** Agent 2.0.0+ only. */
+      status?: 'SATISFIED' | 'NOT_SATISFIED' | 'UNRESOLVED'
+      issues?: string[]
     }
   }
 }

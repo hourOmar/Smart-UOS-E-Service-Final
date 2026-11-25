@@ -119,7 +119,8 @@ test('all seven priority factors and all three eligibility checks remain', () =>
   }
   // Every factor with saved text gets a card; shortening never removes one.
   assert.match(PRIORITY, /const shown = factors \? FACTORS\.filter\(\(\[field\]\) => factors\[field\]\) : \[\]/)
-  assert.match(CHECKS, /<Prerequisite run=\{run\} names=\{names\} \/>\s+<CompletedHours run=\{run\} \/>\s+<Capacity run=\{run\} \/>/)
+  // Three cards, always: runs before agent 2.0.0 keep their original cards; 2.0.0 runs show the complete requirement.
+  assert.match(CHECKS, /\{v2 \? <RequirementV2 run=\{run\} names=\{names\} \/> : <Prerequisite run=\{run\} names=\{names\} \/>\}\s+\{v2 \? <StandingV2 run=\{run\} \/> : <CompletedHours run=\{run\} \/>\}\s+<Capacity run=\{run\} \/>/)
   // The prerequisite failure reason and agent explanation stay; the raw UoS text shows when it adds anything.
   assert.match(CHECKS, /\{details && <p className="pcr-check__detail">\{details\}<\/p>\}/)
   assert.match(CHECKS, /<AgentExplanation text=\{run\.check_explanations\?\.prerequisite\} \/>/)

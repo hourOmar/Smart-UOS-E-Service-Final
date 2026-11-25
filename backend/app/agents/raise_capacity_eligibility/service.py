@@ -10,6 +10,10 @@
   starts, and shown as interrupted until then.
 - A failed rerun never replaces the last successful result: `current` is the newest
   successful run, and a newer failed/unfinished attempt is reported separately.
+- Technical failures (Gemini unreachable, every Gemini reply invalid, the database
+  refusing the result) are FAILED runs with a sanitized message; no recommendation
+  is produced for them. Runs stored before agent 2.0.0 with gemini_status
+  'unavailable' (a MANUAL_REVIEW written when Gemini was unavailable) stay as they are.
 """
 
 import logging
@@ -17,11 +21,11 @@ import traceback
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from app.core.auth import StaffIdentity
 from app.core.database import DatabaseUnavailableError, is_unique_violation, read_only, write_transaction
-from app.core.gemini import describe_failure
+from app.core.gemini import GeminiUnavailableError, describe_failure, sanitize
 
 from . import AGENT_VERSION
 from . import repository as repo
@@ -75,11 +79,30 @@ def _claim_run(request_id: str, staff: StaffIdentity, rerun: bool) -> int | None
         raise
 
 
+_UNDEFINED_COLUMN = "42703"
+_REJECTION_STORAGE = "database/maintenance/raise-capacity-eligibility-rejection/01_install_storage.sql"
+
+
+def _save_refused_message(exc: DBAPIError) -> str:
+    if getattr(exc.orig, "sqlstate", None) == _UNDEFINED_COLUMN:
+        return ("The result was not saved: the rejection explanation storage is not installed "
+                f"({_REJECTION_STORAGE}).")
+    diag = getattr(exc.orig, "diag", None)
+    detail = sanitize(getattr(diag, "message_primary", None) or type(exc).__name__)
+    return f"The result was not saved: the database refused it ({detail})."
+
+
 def _finish(run_id: int, result: dict | None, error: str | None) -> None:
-    with write_transaction() as conn:
-        if result is not None:
-            stored = repo.complete_run(conn, run_id, result)
-        else:
+    if result is not None:
+        try:
+            with write_transaction() as conn:
+                stored = repo.complete_run(conn, run_id, result)
+        except DBAPIError as exc:
+            error = _save_refused_message(exc)
+            log.warning("Run %s: %s", run_id, error)
+            result = None
+    if result is None:
+        with write_transaction() as conn:
             stored = repo.fail_run(conn, run_id, error or "The eligibility check failed.")
     if not stored:
         log.warning("Run %s was no longer running when it finished; result discarded.", run_id)
@@ -96,6 +119,8 @@ def ensure_evaluation(request_id: str, staff: StaffIdentity, rerun: bool) -> Ens
         result = evaluate_raise_capacity_request(request_id)
     except AgentError as exc:
         error = str(exc)
+    except GeminiUnavailableError as exc:
+        error = str(exc)  # already sanitized
     except DatabaseUnavailableError:
         error = "The database could not be reached while collecting evidence."
     except Exception as exc:  # noqa: BLE001 - recorded as a failed run, never left 'running'
