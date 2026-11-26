@@ -162,4 +162,3 @@ The current academic term for request forms is set in `src/config/academicTerm.t
 - Some browsers report an empty file type for PDFs; such files are refused by the PDF check.
 - No end-to-end or component (DOM) tests; tests cover logic in `src/utils` and source rules.
 - The production build is one JavaScript bundle (Vite warns that it is over 500 kB).
-- Course Equivalency and Course Substitution have no form yet.

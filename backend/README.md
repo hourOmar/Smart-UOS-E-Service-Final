@@ -19,13 +19,18 @@ app/
   api/             staff-only routes, one module per feature
     raise_capacity_review.py   raise_capacity_priority.py
     program_change_review.py   incomplete_exam_review.py
+    course_equivalency_review.py   course_equivalency_syllabi.py   course_substitution_review.py
+  course_equivalency/  syllabus file handling (upload, storage, text) for Course Equivalency
   agents/          one package per agent
-    raise_capacity_eligibility/   Raise Capacity Academic Eligibility Evaluation Agent
+    raise_capacity_eligibility/   Raise Capacity Academic Eligibility Evaluation + Rejection Explanation Agents
     raise_capacity_priority/      Raise Capacity Prioritization Agent
     program_change_eligibility/   Program Change Eligibility Agent
     incomplete_exam/              Incomplete Exam Eligibility + Rejection Explanation Agents
+    course_equivalency/           Course Equivalency Eligibility + Rejection Explanation Agents
+    course_substitution_eligibility/  Course Substitution Eligibility + Rejection Explanation Agents
 tests/             offline tests (no network, database or Gemini)
-  priority_agent/  program_change/  incomplete_exam/  plus shared core tests
+  priority_agent/  raise_capacity_eligibility/  program_change/  incomplete_exam/
+  course_equivalency/  course_equivalency_syllabi/  course_substitution/  plus shared core tests
 ```
 
 Each agent package follows the same pattern: **evidence** read from the database (and, where
@@ -34,8 +39,9 @@ needed, official UoS pages or proof documents) → **deterministic checks** in P
 failures) → a **repository** module stores every run.
 
 **Dependencies** (`requirements.txt`): FastAPI, Uvicorn, SQLAlchemy 2, psycopg 3, google-genai,
-Pydantic 2, python-dotenv, Requests, Beautiful Soup 4. `requirements-dev.txt` adds pytest and
-httpx.
+Pydantic 2, python-dotenv, Requests, Beautiful Soup 4, python-multipart (staff file uploads),
+and pypdf, python-docx and lxml (Course Equivalency syllabus text). `requirements-dev.txt` adds
+pytest and httpx.
 
 ## AI agents
 
@@ -115,6 +121,29 @@ are unchanged (the package docstring lists every intentional difference).
 - Evaluations start only when staff ask (`Run Evaluation` / `Re-evaluate` in the frontend).
   Both agents' results are stored together as one run in `agents.incomplete_exam_evaluation`.
 
+### Course Equivalency agents (`course_equivalency/`)
+
+Ported from a standalone project (the package docstring lists every intentional difference).
+The **Eligibility Evaluation Agent** collects verified evidence (request, transcript, catalog
+courses, study plan, transfer limit and the two syllabi); Gemini extracts and matches the
+syllabus contents (quotes are verified in the text by code), Python turns the matches into a
+similarity score, and Gemini recommends `APPROVE` / `REJECT` / `MANUAL_REVIEW` under the
+policy in `knowledge_base/`, with deterministic guardrails against an unsafe APPROVE. Only after a
+REJECT, the **Rejection Explanation Agent** builds verified keywords and three suggested reasons
+validated by code. The first evaluation starts automatically when the review page is opened for an
+eligible request (never evaluated, In Progress, details and both syllabi present); otherwise
+staff run it. Stored in `agents.course_equivalency_evaluation`.
+
+### Course Substitution agents (`course_substitution_eligibility/`)
+
+Ported from a standalone project (the package docstring lists every port change).
+Five checks (original course unavailable before graduation, proposed course at the same level or
+higher, original course is a core course — Gemini reads the official study plan —, proposed course
+offered this semester, proposed course not completed before) give `ELIGIBLE` / `NOT_ELIGIBLE` /
+`MANUAL_REVIEW`. Only after NOT_ELIGIBLE, the rejection step builds deterministic keywords and asks
+Gemini for three suggested reasons, validated by Python with a template fallback. Evaluations
+start only when staff ask. Stored in `agents.course_substitution_evaluation`.
+
 ## API (staff only)
 
 Every route except `/api/health` verifies the caller's Supabase session
@@ -129,10 +158,17 @@ Every route except `/api/health` verifies the caller's Supabase session
 | `GET /api/staff/raise-capacity/priorities?request_id=…` | Priority state of up to 100 requests; never runs the agent |
 | `POST /api/staff/raise-capacity/priorities/automatic` `{"request_ids": [...]}` | Starts checks for eligible requests and returns every state |
 | `POST /api/staff/raise-capacity/{request_id}/priority/retry` | Manual retry after a failed or interrupted check |
+| `POST /api/staff/raise-capacity/{request_id}/priority/rerun` | Re-evaluates a saved priority (In Progress requests only) |
 | `GET /api/staff/program-change/{request_id}/evaluation` | Saved evaluation state; never runs the agent |
 | `POST /api/staff/program-change/{request_id}/evaluations` `{"rerun": bool}` | First evaluation (never evaluated, In Progress) or re-evaluation (In Progress); 409 when not allowed |
 | `GET /api/staff/incomplete-exam/{request_id}/evaluation` | Saved evaluation state; never runs the agents |
 | `POST /api/staff/incomplete-exam/{request_id}/evaluations` `{"rerun": bool}` | First evaluation (never evaluated, In Progress, details present) or re-evaluation (In Progress, details present); 409 when not allowed or already running |
+| `GET /api/staff/course-equivalency/{request_id}/evaluation` | Saved evaluation state; never runs the agents |
+| `POST /api/staff/course-equivalency/{request_id}/evaluations` `{"rerun": bool}` | First evaluation (never evaluated, In Progress, details and both syllabi) or re-evaluation; 409 when not allowed |
+| `GET /api/staff/course-equivalency/{request_id}/syllabi` | The request's syllabus files |
+| `POST /api/staff/course-equivalency/{request_id}/syllabi/{side}` | Staff upload of a syllabus file |
+| `GET /api/staff/course-substitution/{request_id}/evaluation` | Saved evaluation state; never runs the agent |
+| `POST /api/staff/course-substitution/{request_id}/evaluations` `{"rerun": bool}` | First evaluation (never evaluated, In Progress, details present) or re-evaluation (In Progress); 409 when not allowed or already running |
 
 Evaluation responses separate `current` (the newest completed result) from `latest_attempt` (a
 newer failed, interrupted or running attempt), so a failed re-run never hides the last good

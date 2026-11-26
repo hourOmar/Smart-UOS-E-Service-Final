@@ -4,14 +4,11 @@
 # Database maintenance scripts and notes for the shared project
 database/
 
-# Private handover and project documentation
-/local_docs/
-
-# Local skills and design tooling / notes
+# Local tooling folders that are regenerated automatically (Claude Code
+# settings, design-tool notes) and local design notes
 .claude/
 .impeccable/
 design-archive/
-design-reference/
 references/
 DESIGN.md
 PRODUCT.md

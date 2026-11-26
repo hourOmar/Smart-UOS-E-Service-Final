@@ -11,8 +11,7 @@ template fallback). Advisory only: nothing here changes a request; the
 decision stays with staff.
 
 Ported from the standalone project (course-substitution-eligibility-agent,
-commit 32f83d3). The behavior contract is
-docs/course-substitution-behavior-contract.md.
+commit 32f83d3).
 
 Unchanged (pinned in the tests):
 - data/course_offerings_knowledge_base.txt, data/bachelors_program_catalog.txt
